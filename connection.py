@@ -6,12 +6,13 @@ from ui_settings import PARAMETER_TYPES
 WRONG_LIMIT=10
 
 class Connection():
-    def __init__(self, host='127.0.0.1', username='root', password='root'):
+    def __init__(self, host='127.0.0.1', username='root', password='root', db='amar2'):
         self.user = Staff("admin", "admin", "admin", "admin", 3, 0, "روز قبل", 1)
         self.host = host
+        self.db=db
         self.username = username
         self.password = password
-        self.connection = pymysql.connect(host=self.host, user=self.username, passwd=self.password, charset='utf8')
+        self.connection = pymysql.connect(host=self.host, user=self.username, passwd=self.password, database=self.db, charset='utf8')
         self.cursor = self.connection.cursor()
         query = "CREATE SCHEMA IF NOT EXISTS `amar2`;"
         self.cursor.execute(query)
