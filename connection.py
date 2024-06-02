@@ -480,19 +480,44 @@ class Connection():
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
-    def set_min_date_into_temp_table(self, selected_date):
+    def set_min_date_into_temp_table(self, selected_date: datetime):
+        # query = "TRUNCATE TABLE `tbl_parameters_min_date`;"
+        # self.cursor.execute(query)
+        # query = "INSERT INTO `tbl_parameters_min_date` SELECT NULL, `parameter_id`, MIN(`date`) FROM `tbl_parameters_log` WHERE `date`>%s GROUP BY `parameter_id`;"
+        # values = (selected_date, )
+        # self.cursor.execute(query, values)
+        # self.connection.commit()
+
+        # این بهینه تره ولی با احتمال خطا. چون فقط یک سال رو بررسی میکنه
         query = "TRUNCATE TABLE `tbl_parameters_min_date`;"
         self.cursor.execute(query)
-        query = "INSERT INTO `tbl_parameters_min_date` SELECT NULL, `parameter_id`, MIN(`date`) FROM `tbl_parameters_log` WHERE `date`>%s GROUP BY `parameter_id`;"
-        values = (selected_date, )
+        query = "INSERT INTO `tbl_parameters_min_date` SELECT NULL, `parameter_id`, MIN(`date`) FROM `tbl_parameters_log` WHERE `date`>%s AND `date`<=%s GROUP BY `parameter_id`;"
+        try:
+            next_year_date=selected_date.replace(year=selected_date.year+1)
+        except ValueError: # ممکنه سال کبیسه باشه و روزی باشه که سال بعد اون رو نداره. در این صورت روز معادل سال بعد ارور میده. پس روزش رو یه دونه کم میکنیم تو این حالت
+            next_year_date=selected_date.replace(year=selected_date.year+1, day=selected_date.day-1)
+        values = (selected_date, next_year_date)
         self.cursor.execute(query, values)
         self.connection.commit()
 
-    def set_max_date_into_temp_table(self, selected_date):
+
+    def set_max_date_into_temp_table(self, selected_date: datetime):
+        # query = "TRUNCATE TABLE `tbl_parameters_max_date`;"
+        # self.cursor.execute(query)
+        # query = "INSERT INTO `tbl_parameters_max_date` SELECT NULL, `parameter_id`, MAX(`date`) FROM `tbl_parameters_log` WHERE `date`<=%s GROUP BY `parameter_id`;"
+        # values = (selected_date, )
+        # self.cursor.execute(query, values)
+        # self.connection.commit()
+
+        # این بهینه تره ولی با احتمال خطا. چون فقط یک سال رو بررسی میکنه
         query = "TRUNCATE TABLE `tbl_parameters_max_date`;"
         self.cursor.execute(query)
-        query = "INSERT INTO `tbl_parameters_max_date` SELECT NULL, `parameter_id`, MAX(`date`) FROM `tbl_parameters_log` WHERE `date`<=%s GROUP BY `parameter_id`;"
-        values = (selected_date, )
+        query = "INSERT INTO `tbl_parameters_max_date` SELECT NULL, `parameter_id`, MAX(`date`) FROM `tbl_parameters_log` WHERE `date`<=%s AND `date`>%s GROUP BY `parameter_id`;"
+        try:
+            last_year_date=selected_date.replace(year=selected_date.year-1)
+        except ValueError: # ممکنه سال کبیسه باشه و روزی باشه که سال قبل اون رو نداره. در این صورت روز معادل سال قبل ارور میده. پس روزش رو یه دونه کم میکنیم تو این حالت
+            last_year_date=selected_date.replace(year=selected_date.year-1, day=selected_date.day-1)
+        values = (selected_date, last_year_date)
         self.cursor.execute(query, values)
         self.connection.commit()
 
