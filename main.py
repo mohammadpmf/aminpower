@@ -1,6 +1,5 @@
 from authentication import *
 import pymysql
-import os
 
 
 def check_mysql_password(event=None):
@@ -55,7 +54,7 @@ root = Tk()
 S_WIDTH = root.winfo_screenwidth()
 S_HEIGHT = root.winfo_screenheight()
 root.title('صفحه احراز هویت')
-root.config(bg=BG)
+root.config(bg=COLORS['BG'])
 root.resizable(False, False)
 root.geometry(f"+{S_WIDTH//3}+{S_HEIGHT//3}")
 create_my_theme() # اول تو ستینگز بود. اما چون پنجره ای ساخته نشده بود یکی جدید میساخت. به خاطر همین تبدیلش کردم به تابع و اونجا نوشتم اما اینجا صداش کردم.
@@ -75,7 +74,7 @@ else:
     temp_window.resizable(False, False)
     temp_window.protocol('WM_DELETE_WINDOW', root.destroy)
     temp_window.geometry(f"+{S_WIDTH//3}+{S_HEIGHT//3}")
-    temp_window.config(bg=BG)
+    temp_window.config(bg=COLORS['BG'])
     Label(temp_window, cnf=CNF_LABEL, text=' :mysql هاست', anchor='c').grid(row=1, column=2, sticky='news')
     Label(temp_window, cnf=CNF_LABEL, text=' :mysql نام کاربری', anchor='c').grid(row=2, column=2, sticky='news')
     Label(temp_window, cnf=CNF_LABEL, text=' :mysql پسورد', anchor='c').grid(row=3, column=2, sticky='news')

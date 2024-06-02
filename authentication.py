@@ -6,15 +6,14 @@ from models import Part, Place, Staff, Parameter
 from threading import Thread
 from time import sleep
 from decimal import Decimal
-from json import dump, load
-from json.decoder import JSONDecodeError
+import os
 
 
 class MyWindows():
     def __init__(self, connection: Connection, root: Tk):
         self.connection = connection
         self.root = root
-        self.frame = Frame(self.root, bg=BG)
+        self.frame = Frame(self.root, bg=COLORS['BG'])
         self.S_WIDTH = self.root.winfo_screenwidth()
         self.S_HEIGHT= self.root.winfo_screenheight()
 
@@ -97,21 +96,23 @@ class StaffWindow(MyWindows):
         self.user = user
         self.main_window = Toplevel(self.frame)
         self.main_window.title(f'حساب کاربری {self.user}')
-        self.main_window.config(bg=BG)
+        self.main_window.config(bg=COLORS['BG'])
         self.main_window.state('zoomed')
         self.main_window.protocol("WM_DELETE_WINDOW", self.root.destroy)
         self.tab_control = ttk.Notebook(self.main_window) 
         self.tab_control.pack(anchor='n')
-        self.frame_change_password_tab = Frame(self.tab_control, bg=BG)
-        self.frame_add_statistics_tab = Frame(self.tab_control, bg=BG)
+        self.frame_change_password_tab = Frame(self.tab_control, bg=COLORS['BG'])
+        self.frame_add_statistics_tab = Frame(self.tab_control, bg=COLORS['BG'])
         self.tab_control.add(self.frame_change_password_tab, text ='تغییر رمز عبور')
         if self.user.access_level==1:
-            self.frame_add_part_tab = Frame(self.tab_control, bg=BG)
-            self.frame_add_place_tab = Frame(self.tab_control, bg=BG)
-            self.frame_add_counter_tab = Frame(self.tab_control, bg=BG)
-            self.frame_all_counters_tab = Frame(self.tab_control, bg=BG)
-            self.frame_add_user_tab = Frame(self.tab_control, bg=BG)
-            self.frame_set_default_date_tab = Frame(self.tab_control, bg=BG)
+            self.frame_add_part_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.frame_add_place_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.frame_add_counter_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.frame_all_counters_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.frame_add_user_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.frame_set_default_date_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.frame_set_color_theme_tab = Frame(self.tab_control, bg=COLORS['BG'])
+            self.tab_control.add(self.frame_set_color_theme_tab, text ='تغییر رنگ تم برنامه')
             self.tab_control.add(self.frame_set_default_date_tab, text ='تاریخ پیش فرض')
             self.tab_control.add(self.frame_add_user_tab, text ='افزودن کاربر جدید')
             self.tab_control.add(self.frame_all_counters_tab, text ='پارامترهای موجود')
@@ -138,13 +139,13 @@ class StaffWindow(MyWindows):
         self.tab_control_frame.bind('<Button-1>', self.disable_confirm_buttons)
         self.tab_control_frame.bind('<Key>', self.disable_confirm_buttons)
         self.tab_control_frame.bind('<ButtonRelease-1>', self.enable_or_disable_confirm_button)
-        self.bottom_frame = Frame(self.frame_add_statistics, bg=BG)
+        self.bottom_frame = Frame(self.frame_add_statistics, bg=COLORS['BG'])
         self.bottom_frame.pack(side=BOTTOM, expand=True, fill='x')
-        # self.change_day_frame = Frame(self.frame_add_statistics, bg=BG)
+        # self.change_day_frame = Frame(self.frame_add_statistics, bg=COLORS['BG'])
         # self.change_day_frame.pack(side=TOP, expand=True)
-        self.bottom_frame_right = Frame(self.bottom_frame, bg=BG)
+        self.bottom_frame_right = Frame(self.bottom_frame, bg=COLORS['BG'])
         self.bottom_frame_right.pack(side=RIGHT, expand=True, fill='both')
-        self.bottom_frame_left = Frame(self.bottom_frame, bg=BG)
+        self.bottom_frame_left = Frame(self.bottom_frame, bg=COLORS['BG'])
         self.bottom_frame_left.pack(side=LEFT)
         date_picker = DatePicker(self.connection, self.bottom_frame_right)
         date_picker.pack(side=RIGHT, expand=True, fill='both')
@@ -188,11 +189,36 @@ class StaffWindow(MyWindows):
         self.entry_password2_change_users_password.bind('<Return>', self.change_users_password)
 
         if self.connection.user.access_level==1:
+            ###################################### frame_set_color_theme ######################################
+            self.frame_set_color_theme = LabelFrame(self.frame_set_color_theme_tab, cnf=CNF_LBL_FRM)
+            self.frame_set_color_theme.pack(side=RIGHT, anchor='ne', padx=PADX, pady=PADY)
+            # self.frame_set_color_theme.place(relx=0.36, rely=0.04, relwidth=1, relheight=1)
+            self.btn_set_theme_bg_color = Button(self.frame_set_color_theme, text='رنگ پس زمینه', cnf=CNF_BTN, command=lambda: self.select_color('BG'))
+            self.btn_set_theme_fg_color = Button(self.frame_set_color_theme, text='رنگ اصلی نوشته ها', cnf=CNF_BTN, command=lambda: self.select_color('FG'))
+            self.btn_set_theme_alarm_color = Button(self.frame_set_color_theme, text='رنگ آلارم', cnf=CNF_BTN, command=lambda: self.select_color('ALARM_COLOR'))
+            self.btn_set_theme_warning_color = Button(self.frame_set_color_theme, text='رنگ هشدار', cnf=CNF_BTN, command=lambda: self.select_color('WARNING_COLOR'))
+            self.btn_set_theme_ok_color = Button(self.frame_set_color_theme, text='رنگ بدون مشکل', cnf=CNF_BTN, command=lambda: self.select_color('OK_COLOR'))
+            self.btn_set_theme_disabled_bg_color = Button(self.frame_set_color_theme, text='رنگ پس زمینه غیر فعال', cnf=CNF_BTN, command=lambda: self.select_color('DISABLED_BG'))
+            self.btn_set_theme_disabled_fg_color = Button(self.frame_set_color_theme, text='رنگ نوشته غیر فعال', cnf=CNF_BTN, command=lambda: self.select_color('DISABLED_FG'))
+            self.btn_set_theme_bg_lighter_color = Button(self.frame_set_color_theme, text='رنگ پس زمینه روشن تر', cnf=CNF_BTN, command=lambda: self.select_color('BG_LIGHTER'))
+            self.btn_set_theme_fg2_color = Button(self.frame_set_color_theme, text='رنگ دوم نوشته ها', cnf=CNF_BTN, command=lambda: self.select_color('FG2'))
+            self.btn_set_theme_bg_color.grid(row=1, column=6, cnf=CNF_GRID)
+            self.btn_set_theme_fg_color.grid(row=1, column=5, cnf=CNF_GRID)
+            self.btn_set_theme_alarm_color.grid(row=1, column=4, cnf=CNF_GRID)
+            self.btn_set_theme_warning_color.grid(row=1, column=3, cnf=CNF_GRID)
+            self.btn_set_theme_ok_color.grid(row=1, column=2, cnf=CNF_GRID)
+            self.btn_set_theme_disabled_bg_color.grid(row=2, column=6, cnf=CNF_GRID)
+            self.btn_set_theme_disabled_fg_color.grid(row=2, column=5, cnf=CNF_GRID)
+            self.btn_set_theme_bg_lighter_color.grid(row=2, column=4, cnf=CNF_GRID)
+            self.btn_set_theme_fg2_color.grid(row=2, column=3, cnf=CNF_GRID)
+            self.btn_confirm_theme_color = Button(self.frame_set_color_theme, text='تایید رنگ بندی انتخاب شده', cnf=CNF_BTN, font=FONT2, command=self.confirm_theme_color)
+            self.btn_confirm_theme_color.grid(row=3, column=1, cnf=CNF_GRID)
+
             ###################################### frame_set_default_date ######################################
             self.frame_set_default_date = LabelFrame(self.frame_set_default_date_tab, cnf=CNF_LBL_FRM)
             self.frame_set_default_date.pack(side=RIGHT, anchor='ne', padx=PADX, pady=PADY)
             # self.frame_set_default_date.place(relx=0.36, rely=0.04, relwidth=1, relheight=1)
-            self.label_set_default_date = LabelFrame(self.frame_set_default_date, text='تاریخ پیش فرض', cnf=CNF_LABEL)
+            self.label_set_default_date = Label(self.frame_set_default_date, text='تاریخ پیش فرض', cnf=CNF_LABEL)
             self.entry_set_default_date = ttk.Combobox(self.frame_set_default_date, values=DEFAULT_DATE_VALUES, font=FONT, width=WORDS_WIDTH, justify='center')
             self.entry_set_default_date.insert(0, DEFAULT_DATE_VALUES[0])
             self.entry_set_default_date.config(state='readonly')
@@ -1585,6 +1611,21 @@ class StaffWindow(MyWindows):
 
 
     ########################################### generic functions ###########################################
+    def select_color(self, what_color):
+        choosed_color = colorchooser.askcolor()
+        hex_color = choosed_color[1]
+        if hex_color!=None:
+            COLORS[what_color]=hex_color
+    
+    def confirm_theme_color(self):
+        try:
+            os.mkdir('files')
+        except FileExistsError:
+            pass # فولدر خودش وجود داره. چی بهتر از این :)
+        f = open(r'files/theme.json', 'w')
+        dump(COLORS, f, indent=4)
+        f.close()
+
     def refresh_ui(self):
         if self.connection.user.access_level==1:
             self.refresh_parts_tree_view()
@@ -1641,9 +1682,9 @@ class DatePicker(MyWindows):
         self.img_previous_day   = ImageTk.PhotoImage(self.img_previous_day)
         self.img_next_day       = ImageTk.PhotoImage(self.img_next_day)
         self.img_today          = ImageTk.PhotoImage(self.img_today)
-        self.frame_right = Frame(self.frame, bg=BG)
-        self.frame_middle = Frame(self.frame, bg=BG)
-        self.frame_left = Frame(self.frame, bg=BG)
+        self.frame_right = Frame(self.frame, bg=COLORS['BG'])
+        self.frame_middle = Frame(self.frame, bg=COLORS['BG'])
+        self.frame_left = Frame(self.frame, bg=COLORS['BG'])
         self.frame_right.pack(side=RIGHT)
         self.frame_middle.pack(side=RIGHT, expand=True, fill='both')
         self.frame_left.pack(side=RIGHT, expand=True, fill='both')
@@ -1689,8 +1730,6 @@ class DatePicker(MyWindows):
             date=get_jnow()
             if self.connection.user.default_date==DEFAULT_DATE_VALUES[0]:
                 d = jdatetime.timedelta(days=-1)
-            elif self.connection.user.default_date==DEFAULT_DATE_VALUES[2]:
-                d = jdatetime.timedelta(days=1)
             else:
                 d = jdatetime.timedelta(days=0)
             date = date+d
@@ -1771,7 +1810,7 @@ class PartWidget(MyWindows):
         super().__init__(connection, root)
         global all_counter_widgets
         self.places_with_counters=places_with_counters # یک لیستی از مکان ها با پارامترهایی که داخلشون هست. یعنی یک لیستی از تاپل ها که هر کودوم از تاپل ها هر عضوشون یه پارامتر هست.
-        self.my_canvas = Canvas(self.frame, width=int(self.S_WIDTH*0.985), height=int(self.S_HEIGHT*0.72), bg=BG)
+        self.my_canvas = Canvas(self.frame, width=int(self.S_WIDTH*0.985), height=int(self.S_HEIGHT*0.72), bg=COLORS['BG'])
         # self.my_canvas.bind("<MouseWheel>", self.on_mousewheel)
         self.my_canvas.bind_all("<MouseWheel>", self.on_mousewheel)
         self.ver_scrollbar = Scrollbar(self.frame, orient=VERTICAL, command=self.my_canvas.yview)
@@ -1787,17 +1826,17 @@ class PartWidget(MyWindows):
         self.ver_scrollbar.grid(row=1, column=3, sticky='ns')
         self.hor_scrollbar.grid(row=2, column=1, columnspan=3, sticky='ew')
         self.my_canvas.bind('<Configure>', lambda e: self.my_canvas.configure(scrollregion=self.my_canvas.bbox("all")))
-        self.places_window = Frame(self.my_canvas, bg=BG)
+        self.places_window = Frame(self.my_canvas, bg=COLORS['BG'])
         self.my_canvas.create_window((0, 0), window=self.places_window, anchor="ne")
         for i, counters in enumerate(self.places_with_counters):
             if counters: # یعنی اگر یک مکان پارامتر هایی داشت این کارها رو انجام بده اگه نداشت الکی ردیف براش درست نکنه
-                self.frame_row = Frame(self.places_window, bg=BG)
+                self.frame_row = Frame(self.places_window, bg=COLORS['BG'])
                 for index in range(991, 1000):
                     self.frame_row.columnconfigure(index=index, weight=1, minsize=190)
                 self.frame_row.columnconfigure(index=1000, weight=1, minsize=120)
                 self.frame_row.grid(sticky='e')
                 place_name=counters[0].place_title
-                Label(self.frame_row, text=place_name, font=FONT2, bg=BG, fg=FG, width=WORDS_WIDTH//2).grid(row=i, column=1000, sticky='news', padx=4, pady=2)
+                Label(self.frame_row, text=place_name, font=FONT2, bg=COLORS['BG'], fg=COLORS['FG'], width=WORDS_WIDTH//2).grid(row=i, column=1000, sticky='news', padx=4, pady=2)
                 for j, counter in enumerate(counters):
                     c = CounterWidget(
                         self.connection,
@@ -1834,9 +1873,9 @@ class CounterWidget(Parameter, MyWindows):
         self.img_copy = Image.open(r'icons/copy.png')
         self.img_copy = self.img_copy.resize((COPY_ICON_SIZE, COPY_ICON_SIZE))
         self.img_copy = ImageTk.PhotoImage(self.img_copy)
-        self.info_widget = Frame(self.root, bg=BG)
+        self.info_widget = Frame(self.root, bg=COLORS['BG'])
         self.info_widget.grid()
-        self.frame = LabelFrame(self.root, labelwidget=self.info_widget, cnf=CNF_LBL_FRM, padx=PADX, pady=PADY, labelanchor='n', bg=BG, fg=FG, *args, **kwargs)
+        self.frame = LabelFrame(self.root, labelwidget=self.info_widget, cnf=CNF_LBL_FRM, padx=PADX, pady=PADY, labelanchor='n', bg=COLORS['BG'], fg=COLORS['FG'], *args, **kwargs)
         self.lbl_title = Label(self.info_widget, cnf=CNF_LABEL2, text=self.name)
         self.lbl_info = Label(self.info_widget, cnf=CNF_LABEL2, padx=1, text='🛈')
         self.lbl_title.grid(row=1, column=1)
@@ -1894,7 +1933,7 @@ class CounterWidget(Parameter, MyWindows):
         w_u = self.warning_upper_bound
         a_l = self.alarm_lower_bound
         a_u = self.alarm_upper_bound
-        bg=ALARM_COLOR # یه سری ارور میداد با این که ترای و اکسپت گذاشته بودم. خلاصه حالتی پیش میومد که میگفت بی جی تعریف شده نیست.
+        bg=COLORS['ALARM_COLOR'] # یه سری ارور میداد با این که ترای و اکسپت گذاشته بودم. خلاصه حالتی پیش میومد که میگفت بی جی تعریف شده نیست.
         # من هم گفتم اول کار میذارم رنگش آلارم باشه. اگه تغییر کرد که خب درست میشه. اگه نکرد که خب تعریف شده و قرمز هست بهم ارور نمیده دیگه
         # باز هم ارور میداد. فکر کنم به خاطر تب هایی
         # هست که از بین رفتن. اما چون داخل ترای نوشتم برنامه درست کار میکنه. فعلا گفتم روش وقت نذارم.
@@ -1906,19 +1945,19 @@ class CounterWidget(Parameter, MyWindows):
             if self.type == PARAMETER_TYPES[0] and self.boolean_var_bad.get()==False:
                 float(self.entry_current_counter.get()) # کاری باهاش ندارم. فقط الکی گرفتم که اگه مقدار فلوت نداشت ارور بده و باعث شه قرمز شه. دقت کنم که اولش هم چک کردم که مدلش کنتور باشه که بولین ور رو داشته باشه. اگه مدل کنتور نباشه که خب ورک اوت رو برای همه دارم چک میکنم در ادامه. 
             if isinstance(a_l, Decimal) and self.workout<a_l:
-                bg = ALARM_COLOR
+                bg = COLORS['ALARM_COLOR']
             elif isinstance(w_l, Decimal) and self.workout<w_l:
-                bg = WARNING_COLOR
+                bg = COLORS['WARNING_COLOR']
             elif isinstance(a_u, Decimal) and self.workout>a_u:
-                bg = ALARM_COLOR
+                bg = COLORS['ALARM_COLOR']
             elif isinstance(w_u, Decimal) and self.workout>w_u:
-                bg = WARNING_COLOR
+                bg = COLORS['WARNING_COLOR']
             else:
-                bg = OK_COLOR
+                bg = COLORS['OK_COLOR']
         except ValueError:
-            bg=ALARM_COLOR
+            bg=COLORS['ALARM_COLOR']
         except TypeError:
-            bg=ALARM_COLOR
+            bg=COLORS['ALARM_COLOR']
         finally:
             if self.type==PARAMETER_TYPES[0]:
                 if self.boolean_var_bad.get():
@@ -2071,7 +2110,7 @@ class CounterWidget(Parameter, MyWindows):
                 self.entry_workout.config(state='normal')
                 self.entry_workout.focus_set()
             else:
-                self.checkbutton_bad.config(fg=FG)
+                self.checkbutton_bad.config(fg=COLORS['FG'])
                 self.entry_workout.config(state='readonly')
                 self.entry_current_counter.focus_set()
             self.update_workout()

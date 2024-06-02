@@ -27,6 +27,8 @@ class Connection():
         self.cursor.execute(query)
         query = "CREATE TABLE IF NOT EXISTS `amar2`.`tbl_parameters_max_date` (`id` INT NOT NULL AUTO_INCREMENT, `parameter_id` INT UNSIGNED NOT NULL, `max_date` DATE NOT NULL, PRIMARY KEY (`id`)) ENGINE = MEMORY;"
         self.cursor.execute(query)
+        query = "CREATE TABLE IF NOT EXISTS `amar2`.`tbl_parameters_min_date` (`id` INT NOT NULL AUTO_INCREMENT, `parameter_id` INT UNSIGNED NOT NULL, `min_date` DATE NOT NULL, PRIMARY KEY (`id`)) ENGINE = MEMORY;"
+        self.cursor.execute(query)
         try:
             query = "INSERT INTO `amar2`.`tbl_users` (`id`, `name`, `surname`, `username`, `password`, `access_level`) VALUES (0, 'مدیر', 'اصلی', 'admin', '559b56b2daa9bd5b0b659d534a3876bdf91fc9e108c60935534afd412551e740dcdf56130a077f8674b4d203eb28284a', 1);"
             self.cursor.execute(query)
@@ -326,7 +328,7 @@ class Connection():
         for item in self.cursor.fetchall():
             variable_name=item[1]
             try:
-                temp_dict[variable_name]
+                temp_dict[variable_name] # هیچ استفاده ای ازش نکردم. فقط برای این که ببینم هست یا نه به جای نوشتن ایف، گفتم که این کلید رو از تو دیکشنری در بیاره. اگه بود که هیچی. اگه نبود خواست ارور بده گفتم یکی بسازه با مقدار نان
             except KeyError:
                 temp_dict[variable_name]=None
             # اگر لاگی نداشت، تو برنامه نباید ارور کلید بده. در هر حال اون وریبل وجود داره. اما
@@ -334,20 +336,21 @@ class Connection():
         return temp_dict
     
     def get_parameters_next_log_by_date(self, date):
-        query = "SELECT `id`, `variable_name` FROM `amar2`.`tbl_parameters`;"
+        self.set_min_date_into_temp_table(date)
+        query = "SELECT `value`, `workout`, `is_ok`, `date`, `date_time_modified`, `amar2`.`tbl_parameters_log`.`parameter_id`, `amar2`.`tbl_parameters_log`.`user_id`, `amar2`.`tbl_parameters_log`.`id`, `amar2`.`tbl_users`.`name` AS `users_name`, `amar2`.`tbl_users`.`surname` AS `users_surname`, `amar2`.`tbl_parameters`.`type`, `amar2`.`tbl_parameters`.`variable_name` FROM (`amar2`.`tbl_parameters` JOIN `amar2`.`tbl_parameters_min_date` ON (`amar2`.`tbl_parameters`.`id`=`amar2`.`tbl_parameters_min_date`.`parameter_id`)) JOIN `amar2`.`tbl_parameters_log` ON (`amar2`.`tbl_parameters`.`id`=`amar2`.`tbl_parameters_log`.`parameter_id` AND `amar2`.`tbl_parameters_min_date`.`min_date`=`amar2`.`tbl_parameters_log`.`date`) JOIN `amar2`.`tbl_users` ON (`amar2`.`tbl_parameters_log`.`user_id`=`amar2`.`tbl_users`.`id`);"
         self.cursor.execute(query)
         temp_dict = {}
         for item in self.cursor.fetchall():
-            id = item[0]
-            variable_name = item[1]
-            query = "SELECT `value`, `workout`, `is_ok`, `date`, `date_time_modified`, `parameter_id`, `user_id`, `amar2`.`tbl_parameters_log`.`id`, `amar2`.`tbl_users`.`name` as `users_name`, `amar2`.`tbl_users`.`surname` as `users_surname`, `amar2`.`tbl_parameters`.`type` FROM `amar2`.`tbl_parameters_log` JOIN `amar2`.`tbl_users` ON (`amar2`.`tbl_parameters_log`.`user_id`=`amar2`.`tbl_users`.`id`) JOIN `amar2`.`tbl_parameters` ON (`amar2`.`tbl_parameters_log`.`parameter_id`=`amar2`.`tbl_parameters`.`id`) WHERE `amar2`.`tbl_parameters_log`.`parameter_id`=%s AND `date`>%s ORDER BY `date` ASC LIMIT 1;"
-            values = (id, date)
-            self.cursor.execute(query, values)
-            temp = self.cursor.fetchone()
-            if temp == None:
-                temp_dict[variable_name] = None
-            else:
-                temp_dict[variable_name] = ParameterLog(*temp)
+            variable_name = item[11]
+            temp_dict[variable_name] = ParameterLog(*item[:-1])
+        query = "SELECT `id`, `variable_name` FROM `amar2`.`tbl_parameters`;"
+        self.cursor.execute(query)
+        for item in self.cursor.fetchall():
+            variable_name=item[1]
+            try:
+                temp_dict[variable_name]
+            except KeyError:
+                temp_dict[variable_name]=None
         return temp_dict
     
     def change_log_by_computer_id(self, log:ParameterLog):
@@ -463,11 +466,18 @@ class Connection():
         return (result_message, _)
     
     def get_all_parameters_short_info(self):
-        # query = "SELECT * FROM `amar2`.`tbl_parameters` join `amar2`.`tbl_sections` join `amar2`.`tbl_places` WHERE `amar2`.`tbl_parameters`.`section`=`amar2`.`tbl_sections`.`id` AND `amar2`.`tbl_parameters`.`place`=`amar2`.`tbl_places`.`id` ORDER BY `amar2`.`tbl_sections`.`order`, `amar2`.`tbl_places`.`order`, `amar2`.`tbl_parameters`.`order`;"
         query = "SELECT `amar2`.`tbl_parameters`.`id`, `amar2`.`tbl_parameters`.`name`, `amar2`.`tbl_places`.`title`, `amar2`.`tbl_sections`.`title` FROM `amar2`.`tbl_parameters` join `amar2`.`tbl_sections` join `amar2`.`tbl_places` WHERE `amar2`.`tbl_parameters`.`section`=`amar2`.`tbl_sections`.`id` AND `amar2`.`tbl_parameters`.`place`=`amar2`.`tbl_places`.`id` ORDER BY `amar2`.`tbl_sections`.`order`, `amar2`.`tbl_places`.`order`, `amar2`.`tbl_parameters`.`order`;"
         self.cursor.execute(query)
         return self.cursor.fetchall()
-    
+
+    def set_min_date_into_temp_table(self, selected_date):
+        query = "TRUNCATE TABLE `amar2`.`tbl_parameters_min_date`;"
+        self.cursor.execute(query)
+        query = "INSERT INTO `amar2`.`tbl_parameters_min_date` SELECT NULL, `parameter_id`, MIN(`date`) FROM `amar2`.`tbl_parameters_log` WHERE `date`>%s GROUP BY `parameter_id`;"
+        values = (selected_date, )
+        self.cursor.execute(query, values)
+        self.connection.commit()
+
     def set_max_date_into_temp_table(self, selected_date):
         query = "TRUNCATE TABLE `amar2`.`tbl_parameters_max_date`;"
         self.cursor.execute(query)
