@@ -23,7 +23,7 @@ class Connection():
         self.cursor.execute(query)
         query = "CREATE TABLE IF NOT EXISTS `amar2`.`tbl_parameters` (`id` INT UNSIGNED NOT NULL AUTO_INCREMENT, `name` VARCHAR(45) NOT NULL, `type` VARCHAR(45) NOT NULL, `unit` VARCHAR(45) NULL, `default_value` VARCHAR(45) NOT NULL, `variable_name` VARCHAR(45) NOT NULL, `warning_lower_bound` DECIMAL(20,10) UNSIGNED NULL, `warning_upper_bound` DECIMAL(20,10) UNSIGNED NULL, `alarm_lower_bound` DECIMAL(20,10) UNSIGNED NULL, `alarm_upper_bound` DECIMAL(20,10) UNSIGNED NULL, `formula` VARCHAR(255) NOT NULL DEFAULT '', `section` INT UNSIGNED NOT NULL, `place` INT UNSIGNED NOT NULL, `order` INT UNSIGNED NOT NULL, PRIMARY KEY (`id`), UNIQUE INDEX `variable_name_UNIQUE` (`variable_name` ASC) , UNIQUE INDEX `parameter_place_section` (`name` ASC, `place` ASC, `section` ASC) , INDEX `section2_idx` (`section` ASC) , INDEX `place_idx` (`place` ASC) , CONSTRAINT `section2` FOREIGN KEY (`section`) REFERENCES `amar2`.`tbl_sections` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT, CONSTRAINT `place` FOREIGN KEY (`place`) REFERENCES `amar2`.`tbl_places` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT) ENGINE = MyISAM;"
         self.cursor.execute(query)
-        query = "CREATE TABLE IF NOT EXISTS `amar2`.`tbl_parameters_log` (`id` INT UNSIGNED NOT NULL AUTO_INCREMENT, `value` DECIMAL(20,10) NOT NULL, `workout` DECIMAL(20,10) NOT NULL, `is_ok` TINYINT(1) NOT NULL DEFAULT 1, `date` DATE NOT NULL, `date_time_modified` DATETIME NOT NULL, `parameter_id` INT UNSIGNED NOT NULL, `user_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`id`), CONSTRAINT `parameter_id` FOREIGN KEY (`parameter_id`) REFERENCES `amar2`.`tbl_parameters` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE, CONSTRAINT `user_id` FOREIGN KEY (`user_id`) REFERENCES `amar2`.`tbl_users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE) ENGINE = MyISAM;"
+        query = "CREATE TABLE IF NOT EXISTS `amar2`.`tbl_parameters_log` (`id` INT UNSIGNED NOT NULL AUTO_INCREMENT, `value` DECIMAL(20,10) NOT NULL, `workout` DECIMAL(20,10) NOT NULL, `is_ok` TINYINT(1) NOT NULL DEFAULT 1, `date` DATE NOT NULL, `date_time_modified` DATETIME NOT NULL, `parameter_id` INT UNSIGNED NOT NULL, `user_id` INT UNSIGNED NOT NULL, PRIMARY KEY (`id`), INDEX `date_index` (`date` ASC), CONSTRAINT `parameter_id` FOREIGN KEY (`parameter_id`) REFERENCES `amar2`.`tbl_parameters` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE, CONSTRAINT `user_id` FOREIGN KEY (`user_id`) REFERENCES `amar2`.`tbl_users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE) ENGINE = MyISAM;"
         self.cursor.execute(query)
         query = "CREATE TABLE IF NOT EXISTS `amar2`.`tbl_parameters_max_date` (`id` INT NOT NULL AUTO_INCREMENT, `parameter_id` INT UNSIGNED NOT NULL, `max_date` DATE NOT NULL, PRIMARY KEY (`id`)) ENGINE = MEMORY;"
         self.cursor.execute(query)
@@ -314,20 +314,23 @@ class Connection():
         return ParameterLog(*temp)
 
     def get_parameters_log_by_date(self, date):
-        query = "SELECT `id`, `variable_name` FROM `amar2`.`tbl_parameters`;"
+        self.set_max_date_into_temp_table(date)
+        query = "SELECT `value`, `workout`, `is_ok`, `date`, `date_time_modified`, `amar2`.`tbl_parameters_log`.`parameter_id`, `amar2`.`tbl_parameters_log`.`user_id`, `amar2`.`tbl_parameters_log`.`id`, `amar2`.`tbl_users`.`name` AS `users_name`, `amar2`.`tbl_users`.`surname` AS `users_surname`, `amar2`.`tbl_parameters`.`type`, `amar2`.`tbl_parameters`.`variable_name` FROM (`amar2`.`tbl_parameters` JOIN `amar2`.`tbl_parameters_max_date` ON (`amar2`.`tbl_parameters`.`id`=`amar2`.`tbl_parameters_max_date`.`parameter_id`)) JOIN `amar2`.`tbl_parameters_log` ON (`amar2`.`tbl_parameters`.`id`=`amar2`.`tbl_parameters_log`.`parameter_id` AND `amar2`.`tbl_parameters_max_date`.`max_date`=`amar2`.`tbl_parameters_log`.`date`) JOIN `amar2`.`tbl_users` ON (`amar2`.`tbl_parameters_log`.`user_id`=`amar2`.`tbl_users`.`id`);"
         self.cursor.execute(query)
         temp_dict = {}
         for item in self.cursor.fetchall():
-            id = item[0]
-            variable_name = item[1]
-            query = "SELECT `value`, `workout`, `is_ok`, `date`, `date_time_modified`, `parameter_id`, `user_id`, `amar2`.`tbl_parameters_log`.`id`, `amar2`.`tbl_users`.`name` as `users_name`, `amar2`.`tbl_users`.`surname` as `users_surname` FROM `amar2`.`tbl_parameters_log` join `amar2`.`tbl_users` ON (`amar2`.`tbl_parameters_log`.`user_id`=`amar2`.`tbl_users`.`id`) WHERE `amar2`.`tbl_parameters_log`.`parameter_id`=%s AND `date`<=%s ORDER BY `date` DESC LIMIT 1"
-            values = (id, date)
-            self.cursor.execute(query, values)
-            temp = self.cursor.fetchone()
-            if temp == None:
-                temp_dict[variable_name] = None
-            else:
-                temp_dict[variable_name] = ParameterLog(*temp)
+            variable_name = item[11]
+            temp_dict[variable_name] = ParameterLog(*item[:-1])
+        query = "SELECT `id`, `variable_name` FROM `amar2`.`tbl_parameters`;"
+        self.cursor.execute(query)
+        for item in self.cursor.fetchall():
+            variable_name=item[1]
+            try:
+                temp_dict[variable_name]
+            except KeyError:
+                temp_dict[variable_name]=None
+            # اگر لاگی نداشت، تو برنامه نباید ارور کلید بده. در هر حال اون وریبل وجود داره. اما
+            # فقط مقدارش خالیه. به خاطر همین موقع دادن ارور کلید مقدارش رو نان گذاشتم.
         return temp_dict
     
     def get_parameters_next_log_by_date(self, date):
@@ -466,9 +469,9 @@ class Connection():
         return self.cursor.fetchall()
     
     def set_max_date_into_temp_table(self, selected_date):
-        query = "truncate table `amar2`.`tbl_parameters_max_date`;"
+        query = "TRUNCATE TABLE `amar2`.`tbl_parameters_max_date`;"
         self.cursor.execute(query)
-        query = "insert into `amar2`.`tbl_parameters_max_date` SELECT null, parameter_id, max(date) FROM `amar2`.`tbl_parameters_log` where date<=%s group by `parameter_id`;"
+        query = "INSERT INTO `amar2`.`tbl_parameters_max_date` SELECT NULL, `parameter_id`, MAX(`date`) FROM `amar2`.`tbl_parameters_log` WHERE `date`<=%s GROUP BY `parameter_id`;"
         values = (selected_date, )
         self.cursor.execute(query, values)
         self.connection.commit()
@@ -480,6 +483,7 @@ class Connection():
         temp_dict = {}
         for item in self.cursor.fetchall():
             try:
+                # id = item[0] # به کارمون نمیاد دیگه. ولی گذاشتم که باشه
                 variable_name = item[1]
                 value = item[2]
                 workout = item[3]
@@ -492,6 +496,10 @@ class Connection():
                     'value': 0,
                     'workout': 0
                 }
+        # تا اینجای کار، آخرین مقدار و کارکرد رو برای اونهایی که ثبت شدند گرفتیم. اما
+        # تو برنامه من برای همه رو میخواستم حتی اونهایی که هیچ لاگی ندارند که اگه بخوان
+        # آپدیت بشن راحت بشه باهاشون کار کرد و خالی نباشند. پس تمامشون رو از تو دیتابیس
+        # میگیریم و اونهایی هم که نبودن بهشون ۰ میدیم
         query = "SELECT `id`, `variable_name` FROM `amar2`.`tbl_parameters`;"
         self.cursor.execute(query)
         for item in self.cursor.fetchall():
@@ -501,6 +509,7 @@ class Connection():
                 'value': 0,
                 'workout': 0,
             })
+            # اونایی که بودند و ست شدند تغییری نمیکنند. اونایی هم که نبودند به ۰ ست میشن.
         return temp_dict
 
 
