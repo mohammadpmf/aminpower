@@ -1260,34 +1260,25 @@ class StaffWindow(MyWindows):
         all_counter_widgets= [] # یه لیست از تمام کنتور ویجت هایی که میسازیم رو ذخیره میکنم که وسط برنامه بشه تغییرشون داد. هر بار که تابع سید تبز او پارتز صدا میشه، این لیست خالی میشه. چون از اول اومده. داخل رفرشی که میخوام بنویسم فقط تغییر میکنن. پاک نمیشن. اما اگه بخش یا مکان جدیدی به دیتابیس اضافه بشه، همه چیز از اول شروع میشه و این لیست هم از نو تعریف میشه.
         for item in self.tab_control_frame.winfo_children():
             item.destroy()
-        all_parts=self.connection.get_all_parts() # یک لیست تک بعدی از کل بخش ها
-        all_parts.reverse() # خودش گفته بود که ترتیب از راست به چپ بشه به خاطر همین ریورس کردم اینجا. دقت کنم که جاش همین جاست. اگه بعدا ریورس کنم، اطلاعات رو اشتباه مینویسه.
-        # print(all_parts)
-        # for p in all_parts:
-        #     print(p)
-        all_places = [] # یک لیست دو بعدی از کل مکان ها. تو لایه اول بخش ها هستند و لایه دوم، مکان های اون بخش.
-        for part in all_parts:
+        self.all_parts=self.connection.get_all_parts() # یک لیست تک بعدی از کل بخش ها
+        self.all_parts.reverse() # خودش گفته بود که ترتیب از راست به چپ بشه به خاطر همین ریورس کردم اینجا. دقت کنم که جاش همین جاست. اگه بعدا ریورس کنم، اطلاعات رو اشتباه مینویسه.
+        self.all_places = [] # یک لیست دو بعدی از کل مکان ها. تو لایه اول بخش ها هستند و لایه دوم، مکان های اون بخش.
+        for part in self.all_parts:
             temp_places=self.connection.get_all_places_by_part_id(part.id)
-            all_places.append(temp_places)
-        # print(all_places)
-        # for places in all_places:
-        #     print(places)
+            self.all_places.append(temp_places)
         self.all_counters_2d = [] # لیست دو بعدی از تمام کنتور ها برای ارسال به پارت ویجت که تمام کنتورهای یک بخش رو بسازه. دو بعدی هست. دقت کنم که بعضی از لیست هاش هم خالی هستند. چون بخشی هست که ممکنه کنتوری نداشته باشه.
-        for places in all_places: # آل پلیسس یه لیست از مکان های هر بخش هست. پس روش دوباره حلقه میزنیم
+        for places in self.all_places: # آل پلیسس یه لیست از مکان های هر بخش هست. پس روش دوباره حلقه میزنیم
             for place in places:
                 self.all_counters_2d.append(self.connection.get_all_parameters_of_this_part_and_place(part_id=place.part_id, place_id=place.id))
-        # print(self.all_counters_2d)
-        # for counters in self.all_counters_2d:
-        #     print(counters)
         self.set_logged_parts_names()
         tabs_list = []
         parts_tab = []
-        for i, part in enumerate(all_parts):
+        for i, part in enumerate(self.all_parts):
             tabs_list.append(Frame(self.tab_control_frame))
             tabs_list[i].pack()
             self.tab_control_frame.add(tabs_list[i], text =f'{part.title}')
             places_with_counters = []
-            for place in all_places[i]:
+            for place in self.all_places[i]:
                 counters = self.connection.get_all_parameters_of_this_part_and_place(part_id=place.part_id, place_id=place.id)
                 places_with_counters.append(counters)
             parts_tab.append(PartWidget(self.connection, tabs_list[i], places_with_counters))
@@ -1441,12 +1432,24 @@ class StaffWindow(MyWindows):
         global date_picker
         self.logged_parts_names.clear()
         temp_date = date_picker.get_date()
+        # for part in self.all_parts:
+        #     part: Part
+        #     last_log_date = self.connection.get_last_log_date_of_part_by_part_id(part.id)
+        #     if last_log_date!=None and temp_date<=last_log_date:
+        #         self.logged_parts_names.add(part.title)
+        # این کوئری بالا چون جوین کرده بودم هر بار 0.127 ثانیه تقریبا طول میکشید که خب برای ۵ تا بخش
+        # میشد تقریبا 0.7 ثانیه و عملا کند تر میشد. به خاطر همین برگردوندمش به حالت قبلی که تو ورک بنچ
+        # مینوشتم 0.000 ثانیه طول کشیده. چون جوین نکرده بودم. خلاصه گفتم اگه ۱۰۰ تا پارامتر هم باشه
+        # همه با هم میشن 0.100 که باز هم سریعتر میشه. اما چون بخش همه شون یکی بود و با هم ثبت شده
+        # بودند، اولی رو که گرفتم بریک گذاشتم. باز هم میشد ساده ترش کرد. اما ارزش وقت گذاشتن نداشت
+        # به نظرم و خیلی سریعتر نمیشد. در حد زیر هزارم ثانیه
         for counters in self.all_counters_2d:
             for counter in counters:
                 counter: Parameter
                 last_log = self.connection.get_last_log_of_parameter_by_id(counter.id)
                 if last_log!=None and temp_date<=last_log:
                     self.logged_parts_names.add(counter.part_title)
+                break
 
     def confirm_log_insert(self, event=None):
         global sheet_state

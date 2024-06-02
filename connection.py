@@ -261,6 +261,15 @@ class Connection():
             all_places.append(Place(*place))
         return all_places
     
+    def get_last_log_date_of_part_by_part_id(self, id):
+        query = "SELECT `date` FROM `tbl_parameters` JOIN `tbl_parameters_log` ON (`tbl_parameters`.`id`=`tbl_parameters_log`.`parameter_id`) WHERE `section`=%s ORDER BY `date` DESC LIMIT 1;"
+        values = (id, )
+        self.cursor.execute(query, values)
+        temp = self.cursor.fetchone()
+        if temp == None:
+            return temp
+        return temp[0]
+
     def get_last_log_of_parameter_by_id(self, id):
         query = "SELECT `date` FROM `tbl_parameters_log` WHERE `parameter_id`=%s ORDER BY `date` DESC LIMIT 1;"
         values = (id, )
