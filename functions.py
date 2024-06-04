@@ -2,6 +2,7 @@ import hashlib
 from datetime import datetime
 import jdatetime
 from Equation import Expression
+from ui_settings import PARAMETER_TYPES
 
 
 def hash_password(password: str, salt="mohammad pourmohammadi fallah"):
@@ -59,11 +60,11 @@ def what_is_variable_name_problem(name: str, counters_variable_names: tuple):
     if name == "":
         return "نام متغیر را تعیین کنید"
     elif name in ['a', 'b']:
-        return "برای نام متغیر نمی توانید از a و b استفاده کنید."
+        return "استفاده کنید a و b برای نام متغیر نمی توانید از"
     elif not name.isidentifier():
         return "نام متغیر مناسب نیست"
     elif name in counters_variable_names:
-        return "نام متغیر تکراری است و برای یکی از پارامترهای قبلی تعریف شده است."
+        return "نام متغیر تکراری است و برای یکی از پارامترهای قبلی تعریف شده است"
     return None
 
 # تابعی که میشماره هر پارامتر چند جای دیگه تو فرمول ها استفاده شده که اگه حداقل یه بار استفاده شده بود، اجازه پاک کردن بهش ندیم
@@ -79,11 +80,15 @@ def how_many_times_parameters_variable_name_used_in_other_formulas(variable_name
 # تابعی جهت بررسی این که فرمول نوشته شده درست است یا نه.
 # در مرحله دوم که پارامترها رو خودم به دست میارم، دوباره برای همین تابع ارسال میکنم که بررسی کنه داخل دیتابیس هم باشن.
 # در واقع دیگه لازم نیست دستی وارد بشه تو قسمت اول. اما به جای تابع جداگانه کلک زدم ۲ بار همین تابع رو صدا کردم.
-def what_is_formula_problem(formula: str, formula_parameters:list, variable_name: str, counters_variable_names: tuple):
+def what_is_formula_problem(formula: str, formula_parameters:list, variable_name: str, counters_variable_names: tuple, type: str):
     parameters = formula_parameters
     if variable_name in parameters:
         return "از نام متغیر پارامتر نمی توان در فرمول خودش استفاده کرد"
     bad_params = [] # پارامترهایی که قبلا در دیتابیس ثبت نشده اند. اما کاربر به اشتباه به ما داده است.
+    if type==PARAMETER_TYPES[2]:
+        for p in parameters:
+            if p =='b':
+                return f"استفاده کرد b در فرمول پارامترهای محاسباتی نمیتوان از"
     for p in parameters:
         if p in ['a', 'b']:
             continue

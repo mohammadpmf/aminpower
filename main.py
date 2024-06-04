@@ -69,7 +69,7 @@ try:
 except AttributeError:
     skip = False
 if skip:
-    connection = Connection('127.0.0.1', 'root', 'root', 'amar2')
+    connection = Connection('127.0.0.1', 'root', 'root', 'amar22')
     login_form = LoginForm(connection, root)
     login_form.grid()
 else:

@@ -648,7 +648,7 @@ class StaffWindow(MyWindows):
                 self.entry_counter_alarm_upper_bound.focus_set()
                 return
         if formula != "":
-            result = what_is_formula_problem(formula, formula_parameters, variable_name, parameters_variable_names)
+            result = what_is_formula_problem(formula, formula_parameters, variable_name, parameters_variable_names, type)
             if isinstance(result, str): # یعنی اگه یه استرینگ داده بود، مشکلی هست. پس ارور رو نشون بده.
                 msb.showerror("خطا", result)
                 self.entry_counter_formula.focus_set()
@@ -661,7 +661,7 @@ class StaffWindow(MyWindows):
                 self.root.bell()
                 is_everything_ok = msb.askyesno("تایید", message)
                 if is_everything_ok:
-                    result = what_is_formula_problem(formula, result, variable_name, parameters_variable_names)
+                    result = what_is_formula_problem(formula, result, variable_name, parameters_variable_names, type)
                     if isinstance(result, list):
                         is_everything_ok=True
                     else:
@@ -765,7 +765,7 @@ class StaffWindow(MyWindows):
                 return
         if formula != "":
             parameters_variable_names = self.connection.get_all_parameters_variable_names()
-            result = what_is_formula_problem(formula, formula_parameters, variable_name, parameters_variable_names)
+            result = what_is_formula_problem(formula, formula_parameters, variable_name, parameters_variable_names, type)
             if isinstance(result, str): # یعنی اگه یه استرینگ داده بود، مشکلی هست. پس ارور رو نشون بده.
                 msb.showerror("خطا", result)
                 self.entry_counter_formula.focus_set()
@@ -778,7 +778,7 @@ class StaffWindow(MyWindows):
                 self.root.bell()
                 is_everything_ok = msb.askyesno("تایید", message)
                 if is_everything_ok:
-                    result = what_is_formula_problem(formula, result, variable_name, parameters_variable_names)
+                    result = what_is_formula_problem(formula, result, variable_name, parameters_variable_names, type)
                     if isinstance(result, list):
                         is_everything_ok=True
                     else:
@@ -1577,7 +1577,6 @@ class StaffWindow(MyWindows):
         self.set_logged_parts_names()
         self.enable_or_disable_confirm_button()
         self.enable_for_safety()
-        # inja
         for counter_widget in all_counter_widgets:
             counter_widget: CounterWidget
             if counter_widget.type == PARAMETER_TYPES[2]:
@@ -1585,9 +1584,9 @@ class StaffWindow(MyWindows):
             else:
                 counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'], readonlybackground=COLORS['ALARM_COLOR'])
             if counter_widget.part_title in self.logged_parts_names:
+                counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
                 counter_widget.counter_log = counter_widget.connection.get_parameter_log_by_parameter_id_and_date(counter_widget.id , date_picker.get_date())
                 counter_widget.b = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('value'))
-                counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
                 counter_widget.workout = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('workout'))
                 if counter_widget.type==PARAMETER_TYPES[2]:
                     counter_widget.entry_workout.config(text=counter_widget.workout)
@@ -1609,11 +1608,10 @@ class StaffWindow(MyWindows):
                         counter_widget.entry_workout.config(state='disabled')
             else:
                 counter_widget.a = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('value'))
-                counter_widget.workout = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('workout'))
                 if counter_widget.type==PARAMETER_TYPES[1]:
                     if counter_widget.default_value==DEFAULT_VALUES[0]:
                         counter_widget.entry_workout.delete(0, END)
-                        counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
+                        counter_widget.entry_workout.insert(0, round4(float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('workout'))))
                     elif counter_widget.default_value==DEFAULT_VALUES[1]:
                         counter_widget.entry_workout.delete(0, END)
                         counter_widget.entry_workout.insert(0, round4(DEFAULT_VALUES[1]))
@@ -1621,7 +1619,7 @@ class StaffWindow(MyWindows):
                         counter_widget.entry_workout.delete(0, END)
                 else:
                     if counter_widget.type==PARAMETER_TYPES[2]:
-                        counter_widget.entry_workout.config(text="", bg=COLORS['ALARM_COLOR'])
+                        counter_widget.entry_workout.config(text='', bg=COLORS['ALARM_COLOR'])
                     elif counter_widget.type==PARAMETER_TYPES[0]:
                         counter_widget.label_previous_counter.config(text=round4(counter_widget.a))
                         counter_widget.entry_current_counter.delete(0, END)
@@ -1630,7 +1628,7 @@ class StaffWindow(MyWindows):
                         elif counter_widget.default_value==DEFAULT_VALUES[1]:
                             counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
                         elif counter_widget.default_value==DEFAULT_VALUES[2]:
-                            counter_widget.entry_current_counter.insert(0, '')
+                            pass
                         counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
                         counter_widget.entry_workout.delete(0, END)
                         counter_widget.entry_workout.config(state='disabled')
@@ -1638,8 +1636,6 @@ class StaffWindow(MyWindows):
                 create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
             except:
                 pass
-        for i in range(10):
-            counter_widget.next()
 
     def confirm_default_date(self):
         self.user.default_date=self.entry_set_default_date.get().strip()
@@ -1873,7 +1869,7 @@ class CounterWidget(Parameter, MyWindows):
     def __init__(self, connection: Connection, root: Tk, part, place, name, variable_name, formula='', type='کنتور', default_value=0, unit=None, warning_lower_bound=None, warning_upper_bound=None, alarm_lower_bound=None, alarm_upper_bound=None, id=None, place_title=None, part_title=None, *args, **kwargs):
         super().__init__(part, place, name, variable_name, formula, type, default_value, unit, warning_lower_bound, warning_upper_bound, alarm_lower_bound, alarm_upper_bound, id, place_title, part_title)
         MyWindows.__init__(self, connection, root)
-        global all_variables_current_value_and_workout, date_picker
+        global all_variables_current_value_and_workout
         self.img_copy = Image.open(r'icons/copy.png')
         self.img_copy = self.img_copy.resize((COPY_ICON_SIZE, COPY_ICON_SIZE))
         self.img_copy = ImageTk.PhotoImage(self.img_copy)
@@ -1912,7 +1908,7 @@ class CounterWidget(Parameter, MyWindows):
             self.label_previous_counter .grid(row=2, column=2, cnf=CNF_GRID2)
         self.entry_workout.grid(row=1, column=1, cnf=CNF_GRID2)
  
-    def check_color(self, event=None): # inja
+    def check_color(self, event=None):
         w_l = self.warning_lower_bound
         w_u = self.warning_upper_bound
         a_l = self.alarm_lower_bound
@@ -1999,38 +1995,59 @@ class CounterWidget(Parameter, MyWindows):
                 })
             finally:
                 self.check_color()
+        self.update_all_counter_widgets()
         self.update_all_variables_current_value_and_workout()
+    
+    def update_all_counter_widgets(self):
+        for  counter_widget in all_counter_widgets:
+            counter_widget:CounterWidget
+            try:
+                all_variables_current_value_and_workout[counter_widget.variable_name].update({
+                    'value': counter_widget.b,
+                    'workout': counter_widget.workout,
+                })
+            except:
+                all_variables_current_value_and_workout[counter_widget.variable_name].update({
+                    'value': counter_widget.b,
+                    'workout': 0,
+                })
 
     def update_all_variables_current_value_and_workout(self):
         global all_variables_current_value_and_workout, all_counter_widgets
         for counter_widget in all_counter_widgets:
             counter_widget:CounterWidget
-            if counter_widget.formula != "":
-                parameters = get_formula_parameters(counter_widget.formula)
-                values = []
-                for p in parameters:
-                    if p=='b':
-                        values.append(counter_widget.b)
-                    elif p=='a':
-                        values.append(counter_widget.a)
-                    else:
-                        values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
-                counter_widget.answer = calculate_fn(counter_widget.formula, parameters, values)
-            if counter_widget.type==PARAMETER_TYPES[2]:
-                counter_widget.entry_workout.config(text=counter_widget.answer)
-            elif counter_widget.type==PARAMETER_TYPES[1]:
+            if counter_widget.type==PARAMETER_TYPES[1]:
                 pass
                 # لازم نیست کاری بکنیم. چون پارامترهای ثابت با تغییر بقیه تغییر نمیکنند.
                 # اگر خودشون تغییر بکنند که همون لحظه با کی ریلیز بایندش کردیم و تغییر میکنه
                 # اما تغییر بقیه باعث تغییر پارامتر ثابت نمیشه. پس الکی بررسیش نمیکنیم.
-            elif counter_widget.type==PARAMETER_TYPES[0]:
-                counter_widget.entry_workout.config(state='normal')
-                counter_widget.entry_workout.delete(0, END)
-                if counter_widget.boolean_var_bad.get()==False:
-                    counter_widget.entry_workout.insert(0, round4(counter_widget.answer))
-                    counter_widget.entry_workout.config(state='readonly')
-                else:
-                    counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
+            else:
+                parameters = get_formula_parameters(counter_widget.formula)
+                values = []
+                if counter_widget.type==PARAMETER_TYPES[2]:
+                    for p in parameters:
+                        if p=='a':
+                            values.append(counter_widget.a)
+                        else:
+                            values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
+                    counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
+                    counter_widget.entry_workout.config(text=counter_widget.workout)
+                elif counter_widget.type==PARAMETER_TYPES[0]:
+                    for p in parameters:
+                        if p=='b':
+                            values.append(counter_widget.b)
+                        elif p=='a':
+                            values.append(counter_widget.a)
+                        else:
+                            values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
+                    counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
+                    counter_widget.entry_workout.config(state='normal')
+                    counter_widget.entry_workout.delete(0, END)
+                    if counter_widget.boolean_var_bad.get()==False:
+                        counter_widget.entry_workout.insert(0, counter_widget.workout)
+                        counter_widget.entry_workout.config(state='readonly')
+                    else:
+                        pass # کاری نکن
             counter_widget.check_color()
 
     def update_workout(self, event=None):
@@ -2040,18 +2057,15 @@ class CounterWidget(Parameter, MyWindows):
             return
         if event and event.keysym=='period': # این حالت هم باگ داشت نمیشد داخل ورک اوت تو حالت خرابی نقطه گذاشت. روش های مختلف هر کودوم یه مدل اعصاب خرد کن بود و باگ جدید داشت. این مدل به نظرم کمترین باگ رو داشت اینجا گفتم ریترن کنه
             return
-        if self.type==PARAMETER_TYPES[2]:
-            # این حالت قرار نیست هیچ وقت اتفاق بیفته. چون ما نمیتونیم آپدیتش کنیم. خود برنامه آپدیت میکنه
-            # نوشتم که فقط بدونم اینجا بررسی شده
-            return
-        elif self.type==PARAMETER_TYPES[1]:
+        if self.type==PARAMETER_TYPES[1]:
             # تو کنتورهای ثابت میشه مقدار نوشت. ممکنه مقدار اشتباه و یا کم و زیاد نوشته بشه. پس ممکنه ارور بده و باید بررسی بشه. رنگ هم باید بررسی بشه و در صورت لزوم تغییر کنه.
             try:
                 self.workout=float(self.entry_workout.get().strip())
             except ValueError:
-                # اگه این خط رو نذارم ارور میده چون کلا قسمت اکسپت رو ننوشتم. اما من اینجا گفتم کاری نکنه.
+                self.workout=0
                 return
             except TypeError:
+                self.workout=0
                 return
             finally:
                 self.check_color()
@@ -2069,22 +2083,27 @@ class CounterWidget(Parameter, MyWindows):
                         elif p=='a':
                             values.append(self.a)
                         else:
-                            values.append(float(all_variables_current_value_and_workout.get(p).get('workout')))
-                    self.answer = calculate_fn(self.formula, parameters, values)
-                    self.workout = self.answer
+                            values.append(float(all_variables_current_value_and_workout.get(p).get('workout', 0)))
+                    self.workout = calculate_fn(self.formula, parameters, values)
+                    print(self.workout)
                 except ValueError:
+                    self.workout=0
                     return
                 except TypeError:
+                    self.workout=0
                     return
                 finally:
                     self.check_color()
-        self.next()
-        self.next()
+        for i in range(10):
+            self.next()
         # :D
         # اینجا یه بار که تابع نکست رو کال میکردم خودش درست میشد. اما بقیه ها نه. باید رو یکی دیگه کلیک میکردم.
         # هاور هم گذاشتم باید دوبار ماوس رو میبردیم بیرون که خیلی جالب نبود.
         # بهترین راه حل به نظرم این بود که دو بار خودم نکست رو پشت سر هم صدا کنم که هم خودش همون لحظه آپدیت
         # بشه و هم کنتورهایی که بهش وابسته هستند.
+        # وقتی پارامترهای بیشتری به هم وابسته شدند همین کار رو باید تکرار میکردیم. برای موردی که خودش گفته بود ۳ تا
+        # کافی بود. خودم چند تا دیگه گذاشتم دیدم باز کار نمیکنه به خاطر همین ۶ بار کال کردم درست شد. برای محکم کاری
+        # ۱۰ بار صداش کردم. اگه سرعت برنامه  کند شد هماهنگ کنم باهاش ببینم حداکثر چند بار لازمه که اضافه تکرارش نکنم.
 
     def copy_paste(self, event=None):
         if self.type==PARAMETER_TYPES[2]:
@@ -2102,7 +2121,7 @@ class CounterWidget(Parameter, MyWindows):
     def check(self):
         if self.type==PARAMETER_TYPES[0]: # اگه انواع دیگه باشن، بولین ور براشون تعریف نشده و این تابع براشون ارور میده. پس شرط گذاشتم براش.
             if self.boolean_var_bad.get():
-                self.checkbutton_bad.config(fg='red')
+                self.checkbutton_bad.config(fg=COLORS['ALARM_COLOR'])
                 self.entry_workout.config(state='normal')
                 self.entry_workout.focus_set()
             else:
