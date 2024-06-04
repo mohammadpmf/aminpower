@@ -1636,6 +1636,12 @@ class StaffWindow(MyWindows):
                 create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
             except:
                 pass
+        self.check_colors_and_correct_them()
+    
+    def check_colors_and_correct_them(self):
+        for counter_widget in all_counter_widgets:
+            counter_widget: CounterWidget
+            counter_widget.check_color()
 
     def confirm_default_date(self):
         self.user.default_date=self.entry_set_default_date.get().strip()
@@ -1942,8 +1948,10 @@ class CounterWidget(Parameter, MyWindows):
             if self.type==PARAMETER_TYPES[0]:
                 if self.boolean_var_bad.get():
                     self.entry_workout.config(state='normal', bg=bg)
+                    self.checkbutton_bad.config(fg=COLORS['ALARM_COLOR'])
                 else:
                     self.entry_workout.config(state='disabled', disabledbackground=bg)
+                    self.checkbutton_bad.config(fg=COLORS['FG'])
             else:
                 self.entry_workout.config(state='normal', bg=bg)
           
@@ -2024,30 +2032,27 @@ class CounterWidget(Parameter, MyWindows):
             else:
                 parameters = get_formula_parameters(counter_widget.formula)
                 values = []
-                if counter_widget.type==PARAMETER_TYPES[2]:
-                    for p in parameters:
-                        if p=='a':
-                            values.append(counter_widget.a)
-                        else:
+                for p in parameters:
+                    if p=='b':
+                        values.append(counter_widget.b)
+                    elif p=='a':
+                        values.append(counter_widget.a)
+                    else:
+                        try:
                             values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
-                    counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
+                        except ValueError:
+                            values.append(0) # وقتی کلش انتری ورک اوت خالی بود استرینگ خالی میگرفت که نمیتونست به فلوت تبدیل کنه و ارور میداد و اصلا به گت دیکشنری نمیرسید. به خاطر همین دستی ۰ گذاشتم. چون به هر حال چرت نوشته بود داخل اون و مقدارش باید ۰ محسوب میشد.
+                counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
+                if counter_widget.type==PARAMETER_TYPES[2]:
                     counter_widget.entry_workout.config(text=counter_widget.workout)
                 elif counter_widget.type==PARAMETER_TYPES[0]:
-                    for p in parameters:
-                        if p=='b':
-                            values.append(counter_widget.b)
-                        elif p=='a':
-                            values.append(counter_widget.a)
-                        else:
-                            values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
-                    counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
-                    counter_widget.entry_workout.config(state='normal')
-                    counter_widget.entry_workout.delete(0, END)
                     if counter_widget.boolean_var_bad.get()==False:
+                        counter_widget.entry_workout.config(state='normal')
+                        counter_widget.entry_workout.delete(0, END)
                         counter_widget.entry_workout.insert(0, counter_widget.workout)
                         counter_widget.entry_workout.config(state='readonly')
                     else:
-                        pass # کاری نکن
+                        pass
             counter_widget.check_color()
 
     def update_workout(self, event=None):
@@ -2057,15 +2062,17 @@ class CounterWidget(Parameter, MyWindows):
             return
         if event and event.keysym=='period': # این حالت هم باگ داشت نمیشد داخل ورک اوت تو حالت خرابی نقطه گذاشت. روش های مختلف هر کودوم یه مدل اعصاب خرد کن بود و باگ جدید داشت. این مدل به نظرم کمترین باگ رو داشت اینجا گفتم ریترن کنه
             return
-        if self.type==PARAMETER_TYPES[1]:
+        if self.type==PARAMETER_TYPES[2]:
+            return # هیچ وقت رخ نمیده
+        elif self.type==PARAMETER_TYPES[1]:
             # تو کنتورهای ثابت میشه مقدار نوشت. ممکنه مقدار اشتباه و یا کم و زیاد نوشته بشه. پس ممکنه ارور بده و باید بررسی بشه. رنگ هم باید بررسی بشه و در صورت لزوم تغییر کنه.
             try:
                 self.workout=float(self.entry_workout.get().strip())
             except ValueError:
-                self.workout=0
+                # self.workout=0
                 return
             except TypeError:
-                self.workout=0
+                # self.workout=0
                 return
             finally:
                 self.check_color()
@@ -2083,14 +2090,13 @@ class CounterWidget(Parameter, MyWindows):
                         elif p=='a':
                             values.append(self.a)
                         else:
-                            values.append(float(all_variables_current_value_and_workout.get(p).get('workout', 0)))
+                            values.append(float(all_variables_current_value_and_workout.get(p).get('workout')))
                     self.workout = calculate_fn(self.formula, parameters, values)
-                    print(self.workout)
                 except ValueError:
-                    self.workout=0
+                    # self.workout=0
                     return
                 except TypeError:
-                    self.workout=0
+                    # self.workout=0
                     return
                 finally:
                     self.check_color()
