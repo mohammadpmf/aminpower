@@ -449,6 +449,7 @@ class StaffWindow(MyWindows):
             self.refresh_all_counters_treeview()
         
         Thread(target=self.refresh_ui_from_anywhere, daemon=True).start()
+        self.refresh_ui()
 
     ######################################### change password functions #########################################
     # تابعی جهت بررسی این که پسووردها در بخش تغییر پسوورد نمایش داده شوند یا خیر
@@ -1576,6 +1577,7 @@ class StaffWindow(MyWindows):
         self.set_logged_parts_names()
         self.enable_or_disable_confirm_button()
         self.enable_for_safety()
+        # inja
         for counter_widget in all_counter_widgets:
             counter_widget: CounterWidget
             if counter_widget.type == PARAMETER_TYPES[2]:
@@ -1791,7 +1793,7 @@ class PartWidget(MyWindows):
         global all_counter_widgets
         self.places_with_counters=places_with_counters # یک لیستی از مکان ها با پارامترهایی که داخلشون هست. یعنی یک لیستی از تاپل ها که هر کودوم از تاپل ها هر عضوشون یه پارامتر هست.
         self.my_canvas = Canvas(self.frame, width=int(self.S_WIDTH*0.985), height=int(self.S_HEIGHT*0.72), bg=COLORS['BG'])
-        self.my_canvas.bind_all("<MouseWheel>", self.on_mousewheel)
+        self.my_canvas.bind("<MouseWheel>", self.on_mousewheel)
         self.ver_scrollbar = Scrollbar(self.frame, orient=VERTICAL, command=self.my_canvas.yview)
         self.hor_scrollbar = Scrollbar(self.frame, orient=HORIZONTAL, command=self.my_canvas.xview)
         self.my_canvas.configure(yscrollcommand=self.ver_scrollbar.set, xscrollcommand=self.hor_scrollbar.set)
@@ -1810,6 +1812,7 @@ class PartWidget(MyWindows):
         for i, counters in enumerate(self.places_with_counters):
             if counters: # یعنی اگر یک مکان پارامتر هایی داشت این کارها رو انجام بده اگه نداشت الکی ردیف براش درست نکنه
                 self.frame_row = Frame(self.places_window, bg=COLORS['BG'])
+                self.frame_row.bind("<MouseWheel>", self.on_mousewheel)
                 for index in range(991, 1000):
                     self.frame_row.columnconfigure(index=index, weight=1, minsize=190)
                 self.frame_row.columnconfigure(index=1000, weight=1, minsize=120)
@@ -1838,12 +1841,33 @@ class PartWidget(MyWindows):
                         part_title=counter.part_title,
                         )
                     all_counter_widgets.append(c)
+                    c.frame.bind("<MouseWheel>", self.on_mousewheel)
+                    c.info_widget.bind("<MouseWheel>", self.on_mousewheel)
+                    c.lbl_info.bind("<MouseWheel>", self.on_mousewheel)
+                    c.lbl_title.bind("<MouseWheel>", self.on_mousewheel)
+                    c.entry_workout.bind("<MouseWheel>", self.on_mousewheel)
+                    try:
+                        c.entry_current_counter.bind("<MouseWheel>", self.on_mousewheel)
+                    except:
+                        pass
+                    try:
+                        c.label_previous_counter.bind("<MouseWheel>", self.on_mousewheel)
+                    except:
+                        pass
+                    try:
+                        c.btn_copy.bind("<MouseWheel>", self.on_mousewheel)
+                    except:
+                        pass
+                    try:
+                        c.checkbutton_bad.bind("<MouseWheel>", self.on_mousewheel)
+                    except:
+                        pass
                     c.grid(row=i, column=1000-1-j, sticky='news', padx=4, pady=2)
 
     def on_mousewheel(self, event=None):
         x, y = win32api.GetCursorPos()
         x=self.ver_scrollbar.winfo_rootx()
-        win32api.SetCursorPos((x+10, y))
+        win32api.SetCursorPos((x+6, y))
 
 class CounterWidget(Parameter, MyWindows):
     def __init__(self, connection: Connection, root: Tk, part, place, name, variable_name, formula='', type='کنتور', default_value=0, unit=None, warning_lower_bound=None, warning_upper_bound=None, alarm_lower_bound=None, alarm_upper_bound=None, id=None, place_title=None, part_title=None, *args, **kwargs):
@@ -1860,18 +1884,8 @@ class CounterWidget(Parameter, MyWindows):
         self.lbl_info = Label(self.info_widget, cnf=CNF_LABEL2, padx=1, text='🛈')
         self.lbl_title.grid(row=1, column=1)
         self.lbl_info.grid(row=1, column=2)
-        self.counter_log = self.connection.get_parameter_log_by_parameter_id_and_date(self.id , date_picker.get_date()) # اطلاعات آخرین لاگ این تاریخ رو موقع تعریف کنتور ویجت گرفتم که مثلا اگه خراب بود بتونم تیکش رو فعال کنم. اما گفت لازم نیست. دیگه پاک نکردم. داخل سلف ذخیره اش کردم.
+        self.counter_log = None # بعدا برای هر پارامتر مقدار دهی میشه با یک لاگ کامل از اون پارامتر. دیگه اینجا الکی به دیتابیس هیت نزدم
         self.a = self.b = float(all_variables_current_value_and_workout.get(self.variable_name).get('value'))
-        self.answer = '' # چیزی که قراره تو کنتور نوشته بشه، پیشفرضش خالی هست. اگه تغییر ندادیم خالی میمونه. اگه تغییر بدیم که بر اساس نوع پارامتر عوض میشه.
-        if self.formula != "":
-            parameters = get_formula_parameters(self.formula)
-            values = []
-            for p in parameters:
-                if p in ['a', 'b']:
-                    values.append(self.b)
-                else:
-                    values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout'))))
-            self.answer = calculate_fn(self.formula, parameters, values)
         if self.type==PARAMETER_TYPES[2]:
             self.entry_workout = Label(self.frame, cnf=CNF_LABEL2, font=FONT2, pady=4, width=18, padx=14, height=1, *args, **kwargs)
         elif self.type==PARAMETER_TYPES[1]:
