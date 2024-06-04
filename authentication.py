@@ -90,7 +90,7 @@ class StaffWindow(MyWindows):
     def __init__(self, connection: Connection, root: Tk, user: Staff):
         super().__init__(connection, root)
         global date_picker, signal, sheet_state
-        sheet_state = 'update'
+        sheet_state = 'insert'
         signal = 0 # برای این که وقتی یه آپدیتی کردیم رو یه پارامتر، ظاهر برنامه رو رفرش کنیم و به تابع رفرش یو آی این کلاس دسترسی داشته باشیم.
         self.logged_parts_names = set() # یه لیست از پارت هایی که در تاریخ فعلی لاگ رو ثبت کردند. البته اول لیست گرفته بودم. بعد گفتم مجموعه کنم بهتره. اگه ثبت کردند، اسمشون میره تو این مجموعه که دیگه نتونن ثبت کنن و فقط بتونن ویرایش کنن. اول کار هیچ کس ثبت نکرده، پس فقط یه مجموعه خالی داریم. هر بخشی که ثبت کرد وارد این مجموعه میشه و بعد از اون فقط میتونه ویرایش کنه.
         self.user = user
@@ -138,7 +138,7 @@ class StaffWindow(MyWindows):
         self.tab_control_frame.pack(side=TOP, expand=True, fill='both')
         self.tab_control_frame.bind('<Button-1>', self.disable_confirm_buttons)
         self.tab_control_frame.bind('<Key>', self.disable_confirm_buttons)
-        self.tab_control_frame.bind('<ButtonRelease-1>', self.enable_or_disable_confirm_button)
+        self.tab_control_frame.bind('<ButtonRelease-1>', self.fill_counter_widgets)
         self.bottom_frame = Frame(self.frame_add_statistics, bg=COLORS['BG'])
         self.bottom_frame.pack(side=BOTTOM, expand=True, fill='x')
         # self.change_day_frame = Frame(self.frame_add_statistics, bg=COLORS['BG'])
@@ -823,7 +823,6 @@ class StaffWindow(MyWindows):
             self.refresh_ui()
         else:
             msb.showerror("خطا", result_message)
-            print(_)
 
     # تابعی برای این که با دابل کلیک روی نام یک پارامتر در بخش نمایش آنها، جزییات آن را نمایش دهد و قابل تغییر باشد.
     def change_counter_info(self, event=None):
@@ -956,7 +955,6 @@ class StaffWindow(MyWindows):
             self.entry_part_name.delete(0, END)
         else:
             msb.showerror("خطا", result_message)
-            print(_)
         self.entry_part_name.focus_set()
 
     # تابعی برای این که بعد از ساخت یک بخش، در ظاهر برنامه و
@@ -1122,7 +1120,6 @@ class StaffWindow(MyWindows):
             self.refresh_ui()
         else:
             msb.showerror("خطا", result_message)
-            print(_)
         self.entry_place_name.focus_set()
 
     # تابعی برای این که بعد از ساخت یک مکان در ظاهر برنامه و
@@ -1257,9 +1254,7 @@ class StaffWindow(MyWindows):
     # تابعی برای این که تب های درون قسمت آمار پارامتر ها رو مقداردهی کنه
     def seed_tabs_of_parts(self):
         global all_counter_widgets
-        all_counter_widgets= [] # یه لیست از تمام کنتور ویجت هایی که میسازیم رو ذخیره میکنم که وسط برنامه بشه تغییرشون داد. هر بار که تابع سید تبز او پارتز صدا میشه، این لیست خالی میشه. چون از اول اومده. داخل رفرشی که میخوام بنویسم فقط تغییر میکنن. پاک نمیشن. اما اگه بخش یا مکان جدیدی به دیتابیس اضافه بشه، همه چیز از اول شروع میشه و این لیست هم از نو تعریف میشه.
-        for item in self.tab_control_frame.winfo_children():
-            item.destroy()
+        all_counter_widgets= []
         self.all_parts=self.connection.get_all_parts() # یک لیست تک بعدی از کل بخش ها
         self.all_parts.reverse() # خودش گفته بود که ترتیب از راست به چپ بشه به خاطر همین ریورس کردم اینجا. دقت کنم که جاش همین جاست. اگه بعدا ریورس کنم، اطلاعات رو اشتباه مینویسه.
         self.all_places = [] # یک لیست دو بعدی از کل مکان ها. تو لایه اول بخش ها هستند و لایه دوم، مکان های اون بخش.
@@ -1338,95 +1333,20 @@ class StaffWindow(MyWindows):
         date_picker.combo_year.config(state='readonly')
 
     def enable_or_disable_confirm_button(self, event=None):
-        global all_counter_widgets, last_selected_child_tab_number_to_retrieve, sheet_state
-        # با این که تابع جدا برای دیسیبل کردن نوشتم. ولی حالات زیادی برای باگ خوردن داشت.
-        # باز هم گفتم برای باگ نخوردن، اینجا هم یه بار دیسیبل کنم و بعد با شرط اونی که اوکی هست
-        # رو اینیبل کنم.
-        self.btn_confirm_counter_log_insert.config(state='disabled', relief='flat')
-        self.btn_confirm_counter_log_update.config(state='disabled', relief='flat')
-        self.disable_for_safety()
-        # این خط و بعدیش رو همین طوری نوشته بودم. کلا درست کار میکرد. به غیر از بار اول که هیچ تبی
-        # تو قسمت ثبت آمار وجود نداشت. دفعه اول که یه پارت میساختیم چون هیچ تبی وجود نداشت ارور
-        # میداد و جابه جایی صفحات درست کار نمیکرد. به خاطر همین این ترای و اکسپت رو براش نوشتم
-        # بعد به پارت نیم ارور میداد. اون رو هم درست کردم. در آخر چون سلکت نشده بود به رفرش یو آی فرام
-        # انیور ارور میداد که اون جا هم یه ترای اکسپت گذاشتم. این طوری باعث میشه که همون دفعه اول
-        # هم اوکی باشه و بشه با برنامه کار کرد. اما موقعی که اینها نبود باید برنامه بسته میشد و مجددا
-        # باز میشد تا درست کار کنه.
-        try:
-            last_selected_child_tab_number_to_retrieve = self.tab_control_frame.index(self.tab_control_frame.select())
-        except:
-            last_selected_child_tab_number_to_retrieve = 0
-        try:
-            part_name = self.tab_control_frame.tab(self.tab_control_frame.select(), "text")
-        except:
-            part_name = ''
+        global sheet_state
+        part_name = self.tab_control_frame.tab(self.tab_control_frame.select(), "text")
         if part_name in self.logged_parts_names:
-            # یعنی این صفحه، صفحه ای هست که قراره آپدیت بشه. پس اطلاعات قبلی دیتابیس باید نمایش داده بشن.
             sheet_state = 'update'
+        else:
+            sheet_state = 'insert'
+        if sheet_state=='update':
             self.btn_confirm_counter_log_update.config(state='normal', relief='raised')
             self.btn_confirm_counter_log_insert.pack_forget()
             self.btn_confirm_counter_log_update.pack(side=LEFT, padx=PADX)
-            self.enable_for_safety()
-            for counter_widget in all_counter_widgets:
-                counter_widget: CounterWidget
-                if counter_widget.part_title==part_name:
-                    if counter_widget.type in PARAMETER_TYPES[1:3]:
-                        continue # چون از نوع محاسباتی یا ثابتی هستند که قبلا ثبت شدن. پس لازم نیست دست بزنیم و مقادیر قبلیشون باید داخلشون نوشته بشه.
-                    elif counter_widget.type==PARAMETER_TYPES[0]:
-                        previous_value = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
-                        counter_widget.label_previous_counter.config(text=round4(previous_value))
-                        counter_widget.entry_workout.config(state='normal')
-                        # counter_widget.entry_workout.delete(0, END) دقت کنم که این قبلا اینجا بود اگه آخرین کنتور خراب بود، باگ میخورد. ترتیب رو عوض کردم اون کنتور درست شد یکی دیگه خراب شد. خلاصه این که جاش اینجا نیست و تو دو تا شرط جدا نوشتم درست شد. گذاشتم یادم نره اشتباهی به خاطر یه خط ساده سازی دوباره این شکلیش نکنم.
-                        if counter_widget.counter_log and counter_widget.counter_log.is_ok==0: # قبل از اند اون رو گذاشتم چون اگه رکوردی نبود نان میداد و خب نمیشه از تو هیچی ایز اوکی رو در آورد.
-                            counter_widget.boolean_var_bad.set(1)
-                            counter_widget.check()
-                            counter_widget.entry_workout.delete(0, END)
-                            counter_widget.entry_workout.insert(0, round4(counter_widget.counter_log.workout))
-                        elif counter_widget.counter_log:
-                            counter_widget.entry_workout.delete(0, END)
-                            counter_widget.entry_workout.insert(0, round4(counter_widget.answer))
-                        counter_widget.entry_workout.config(state='disabled')
-                        counter_widget.update_workout()
         else:
-            # یعنی این صفحه، صفحه ای هست که قراره داده جدید ثبت بشه. پس اطلاعات قبلی دیتابیس، باید در صورتی تو مقدار کار کرد جدید بیان که خودش خواسته باشه. اگه نه که برای ثابت و کنتور نمیان. برای محاسباتی هم بر اساس اطلاعات ناقص فعلی نوشته میشه
-            sheet_state = 'insert'
             self.btn_confirm_counter_log_update.pack_forget()
             self.btn_confirm_counter_log_insert.pack(side=LEFT, padx=PADX)
             self.btn_confirm_counter_log_insert.config(state='normal', relief='raised')
-            self.enable_for_safety()
-            for counter_widget in all_counter_widgets:
-                counter_widget: CounterWidget
-                if counter_widget.part_title==part_name:
-                    if counter_widget.type == PARAMETER_TYPES[2]:
-                        continue
-                    elif counter_widget.type == PARAMETER_TYPES[1]:
-                        counter_widget.entry_workout.delete(0, END)
-                        if counter_widget.default_value==DEFAULT_VALUES[0]:
-                            counter_widget.entry_workout.insert(0, round4(counter_widget.a))
-                        elif counter_widget.default_value==DEFAULT_VALUES[1]:
-                            counter_widget.entry_workout.insert(0, DEFAULT_VALUES[1])
-                        elif counter_widget.default_value==DEFAULT_VALUES[2]:
-                            pass
-                    elif counter_widget.type==PARAMETER_TYPES[0]:
-                        counter_widget.entry_current_counter.delete(0, END)
-                        if counter_widget.default_value==DEFAULT_VALUES[0]:
-                            counter_widget.entry_current_counter.insert(0, round4(counter_widget.a))
-                        elif counter_widget.default_value==DEFAULT_VALUES[1]:
-                            counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
-                        elif counter_widget.default_value==DEFAULT_VALUES[2]:
-                            pass
-                        # previous_value = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
-                        # counter_widget.label_previous_counter.config(text=round4(previous_value))
-                        # counter_widget.entry_workout.config(state='normal')
-                        # counter_widget.entry_workout.delete(0, END)
-                        # if counter_widget.counter_log and counter_widget.counter_log.is_ok==0: # قبل از اند اون رو گذاشتم چون اگه رکوردی نبود نان میداد و خب نمیشه از تو هیچی ایز اوکی رو در آورد.
-                        #     counter_widget.boolean_var_bad.set(1)
-                        #     counter_widget.check()
-                        #     counter_widget.entry_workout.insert(0, round4(counter_widget.counter_log.workout))
-                        # else:
-                        #     counter_widget.entry_workout.insert(0, round4(counter_widget.answer))
-                        # counter_widget.entry_workout.config(state='disabled')
-                        # counter_widget.update_workout()
 
     def set_logged_parts_names(self):
         global date_picker
@@ -1493,7 +1413,7 @@ class StaffWindow(MyWindows):
             self.btn_confirm_counter_log_update.pack(side=LEFT, padx=PADX)
             self.enable_for_safety()
         else:
-            self.enable_or_disable_confirm_button()
+            self.fill_counter_widgets()
             msb.showerror("ارور", result_message)
 
     # تابی برای بررسی این که اعداد با ظاهر فعلی در صفحه در دیتابیس ذخیره شوند یا نه
@@ -1568,7 +1488,7 @@ class StaffWindow(MyWindows):
             self.enable_for_safety()
             self.update_next_logs_if_necessary()
         else:
-            self.enable_or_disable_confirm_button()
+            self.fill_counter_widgets()
             msb.showerror("ارور", result_message)
 
     def update_next_logs_if_necessary(self):
@@ -1636,29 +1556,88 @@ class StaffWindow(MyWindows):
             # self.refresh_places_tree_view() # این ورودی میخواد. به خاطر همین کامنت کردم. گذاشتم که بعدا اشتباهی دوباره نذارمش.
             self.refresh_places_frame_after_selecting_part()
             self.refresh_all_counters_treeview()
-        self.seed_tabs_of_parts()
-        self.enable_or_disable_confirm_button()
-
+        self.fill_counter_widgets()
 
     def refresh_ui_from_anywhere(self):
-        global signal, last_selected_child_tab_number_to_retrieve
+        global signal
         # sleep(1.2)
         while True:
             sleep(0.01)
             if signal:
                 signal=0
-                try:
-                    temp=last_selected_child_tab_number_to_retrieve
-                except:
-                    temp=self.tab_control_frame.index('end')-1
                 self.refresh_ui()
-                self.tab_control.select(self.frame_add_statistics_tab)
-                try:
-                    self.tab_control_frame.select(temp)
-                except:
-                    pass # اولین بار که برنامه هیچ صفحه ای نداره، نمیتونه یک تب خاص رو بذاره و ارور میده. باید صفحه بسته بشه و دوباره باز بشه. که با این پس که گذاشتم دیگه لازم نیست ببنده. چون ارور نمیده
-                self.enable_or_disable_confirm_button()
     
+    def fill_counter_widgets(self, event=None):
+        global all_counter_widgets, sheet_state
+        self.btn_confirm_counter_log_insert.config(state='disabled', relief='flat')
+        self.btn_confirm_counter_log_update.config(state='disabled', relief='flat')
+        self.disable_for_safety()
+        self.set_logged_parts_names()
+        self.enable_or_disable_confirm_button()
+        self.enable_for_safety()
+        for counter_widget in all_counter_widgets:
+            counter_widget: CounterWidget
+            if counter_widget.type == PARAMETER_TYPES[2]:
+                counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'])
+            else:
+                counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'], readonlybackground=COLORS['ALARM_COLOR'])
+            if counter_widget.part_title in self.logged_parts_names:
+                counter_widget.counter_log = counter_widget.connection.get_parameter_log_by_parameter_id_and_date(counter_widget.id , date_picker.get_date())
+                counter_widget.b = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('value'))
+                counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
+                counter_widget.workout = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('workout'))
+                if counter_widget.type==PARAMETER_TYPES[2]:
+                    counter_widget.entry_workout.config(text=counter_widget.workout)
+                elif counter_widget.type==PARAMETER_TYPES[1]:
+                    counter_widget.entry_workout.delete(0, END)
+                    counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
+                elif counter_widget.type==PARAMETER_TYPES[0]:
+                    counter_widget.label_previous_counter.config(text=round4(counter_widget.a))
+                    counter_widget.entry_current_counter.delete(0, END)
+                    counter_widget.entry_current_counter.insert(0, round4(counter_widget.b))
+                    counter_widget.entry_workout.config(state='normal')
+                    counter_widget.entry_workout.delete(0, END)
+                    counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
+                    if counter_widget.counter_log and counter_widget.counter_log.is_ok==0: # قبل از اند اون رو گذاشتم چون اگه رکوردی نبود نان میداد و خب نمیشه از تو هیچی ایز اوکی رو در آورد.
+                        counter_widget.boolean_var_bad.set(True)
+                        # counter_widget.entry_workout.config(state='normal') اضافیه. چند خط قبل نرمالش کردیم
+                    elif counter_widget.counter_log:
+                        counter_widget.boolean_var_bad.set(False)
+                        counter_widget.entry_workout.config(state='disabled')
+            else:
+                counter_widget.a = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('value'))
+                counter_widget.workout = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('workout'))
+                if counter_widget.type==PARAMETER_TYPES[1]:
+                    if counter_widget.default_value==DEFAULT_VALUES[0]:
+                        counter_widget.entry_workout.delete(0, END)
+                        counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
+                    elif counter_widget.default_value==DEFAULT_VALUES[1]:
+                        counter_widget.entry_workout.delete(0, END)
+                        counter_widget.entry_workout.insert(0, round4(DEFAULT_VALUES[1]))
+                    elif counter_widget.default_value==DEFAULT_VALUES[2]:
+                        counter_widget.entry_workout.delete(0, END)
+                else:
+                    if counter_widget.type==PARAMETER_TYPES[2]:
+                        counter_widget.entry_workout.config(text="", bg=COLORS['ALARM_COLOR'])
+                    elif counter_widget.type==PARAMETER_TYPES[0]:
+                        counter_widget.label_previous_counter.config(text=round4(counter_widget.a))
+                        counter_widget.entry_current_counter.delete(0, END)
+                        if counter_widget.default_value==DEFAULT_VALUES[0]:
+                            counter_widget.entry_current_counter.insert(0, round4(counter_widget.a))
+                        elif counter_widget.default_value==DEFAULT_VALUES[1]:
+                            counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
+                        elif counter_widget.default_value==DEFAULT_VALUES[2]:
+                            counter_widget.entry_current_counter.insert(0, '')
+                        counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
+                        counter_widget.entry_workout.delete(0, END)
+                        counter_widget.entry_workout.config(state='disabled')
+            try:
+                create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
+            except:
+                pass
+        for i in range(10):
+            counter_widget.next()
+
     def confirm_default_date(self):
         self.user.default_date=self.entry_set_default_date.get().strip()
         result_message, result = self.connection.update_default_date_of_user()
@@ -1728,7 +1707,6 @@ class DatePicker(MyWindows):
             self.btn_today.pack_forget()
 
     def refresh_date(self, date=None):
-        global selected_date, all_variables_current_value_and_workout
         if date==None: # این برای اول کار هست. وقتی که تابع تایم دلتا این رو صدا میکنه بهش روز رو میده و نان نیست. پس این ایف اجرا نمیشه.
             date=get_jnow()
             if self.connection.user.default_date==DEFAULT_DATE_VALUES[0]:
@@ -1736,8 +1714,6 @@ class DatePicker(MyWindows):
             else:
                 d = jdatetime.timedelta(days=0)
             date = date+d
-        selected_date = date.togregorian()
-        all_variables_current_value_and_workout=self.connection.get_all_parameters_current_value_and_workout(selected_date) # این رو آخر سر اضافه کردم. برای این که مدام از دیتابیس نپرسیم مقادیر رو، اول کار مقدار فعلی همه متغیرها رو میگیریم که تو برنامه راحت بشه باهاشون کار کرد هی نریم سراغ دیتابیس. هر بار هم که تابع رفرش یو آی صدا زده میشه این متغیر رو با همین دستور آپدیت میکنم منتهی چون تو کلاس دیگه هم لازم داشتم، به جای ذخیره کردن در سلف، گلوبالش کردم.
         self.combo_year.config(state='normal')
         self.combo_month.config(state='normal')
         self.combo_day.config(state='normal')
@@ -1841,6 +1817,7 @@ class PartWidget(MyWindows):
                 place_name=counters[0].place_title
                 Label(self.frame_row, text=place_name, font=FONT2, bg=COLORS['BG'], fg=COLORS['FG'], width=WORDS_WIDTH//2).grid(row=i, column=1000, sticky='news', padx=4, pady=2)
                 for j, counter in enumerate(counters):
+                    counter: Parameter
                     c = CounterWidget(
                         self.connection,
                         self.frame_row,
@@ -1864,7 +1841,6 @@ class PartWidget(MyWindows):
                     c.grid(row=i, column=1000-1-j, sticky='news', padx=4, pady=2)
 
     def on_mousewheel(self, event=None):
-        print(event)
         self.my_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
 
@@ -1884,7 +1860,7 @@ class CounterWidget(Parameter, MyWindows):
         self.lbl_title.grid(row=1, column=1)
         self.lbl_info.grid(row=1, column=2)
         self.counter_log = self.connection.get_parameter_log_by_parameter_id_and_date(self.id , date_picker.get_date()) # اطلاعات آخرین لاگ این تاریخ رو موقع تعریف کنتور ویجت گرفتم که مثلا اگه خراب بود بتونم تیکش رو فعال کنم. اما گفت لازم نیست. دیگه پاک نکردم. داخل سلف ذخیره اش کردم.
-        self.a = self.b = round4(float(all_variables_current_value_and_workout.get(self.variable_name).get('value')))
+        self.a = self.b = float(all_variables_current_value_and_workout.get(self.variable_name).get('value'))
         self.answer = '' # چیزی که قراره تو کنتور نوشته بشه، پیشفرضش خالی هست. اگه تغییر ندادیم خالی میمونه. اگه تغییر بدیم که بر اساس نوع پارامتر عوض میشه.
         if self.formula != "":
             parameters = get_formula_parameters(self.formula)
@@ -1896,7 +1872,7 @@ class CounterWidget(Parameter, MyWindows):
                     values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout'))))
             self.answer = calculate_fn(self.formula, parameters, values)
         if self.type==PARAMETER_TYPES[2]:
-            self.entry_workout = Label(self.frame, text=self.answer, cnf=CNF_LABEL2, font=FONT2, pady=4, width=18, padx=14, height=1, *args, **kwargs)
+            self.entry_workout = Label(self.frame, cnf=CNF_LABEL2, font=FONT2, pady=4, width=18, padx=14, height=1, *args, **kwargs)
         elif self.type==PARAMETER_TYPES[1]:
             self.btn_copy = Label(self.frame, image=self.img_copy, cnf=CNF_BTN2, relief='raised', *args, **kwargs)
             self.btn_copy.bind('<Button-1>', self.copy_paste)
@@ -1904,34 +1880,24 @@ class CounterWidget(Parameter, MyWindows):
             self.frame.bind('<FocusOut>', self.next)
             self.entry_workout.bind('<KeyRelease>', self.update_workout)
             self.btn_copy.grid(row=1, column=2, cnf=CNF_GRID2, padx=9)
-            self.entry_workout.insert(0, round4(self.a))
         elif self.type==PARAMETER_TYPES[0]:
             self.btn_copy = Label(self.frame, image=self.img_copy, cnf=CNF_BTN2, relief='raised', *args, **kwargs)
             self.btn_copy.bind('<Button-1>', self.copy_paste)
             self.entry_current_counter = Entry(self.frame, cnf=CNF_ENTRY2, font=FONT2_5, width=WORDS_WIDTH2+2, *args, **kwargs)
-            self.label_previous_counter = Label(self.frame, cnf=CNF_LABEL2, text=round4(self.a), *args, **kwargs)
+            self.label_previous_counter = Label(self.frame, cnf=CNF_LABEL2, *args, **kwargs)
             self.entry_workout = Entry(self.frame, cnf=CNF_ENTRY2, font=FONT2, width=WORDS_WIDTH3+2, *args, **kwargs)
             self.boolean_var_bad = BooleanVar(self.frame)
             self.checkbutton_bad = Checkbutton(self.frame, cnf=CNF_CHB2, variable=self.boolean_var_bad, text='خرابی', command=self.check)
             self.frame.bind('<FocusOut>', self.next)
             self.entry_current_counter.bind('<KeyRelease>', self.update_workout)
             self.entry_workout.bind('<KeyRelease>', self.update_workout)
-            self.entry_current_counter  .insert(0, round4(self.a))
-            self.entry_workout          .insert(0, self.answer)
-            self.entry_workout.config(state='readonly')
             self.btn_copy               .grid(row=1, column=3, cnf=CNF_GRID2)
             self.entry_current_counter  .grid(row=1, column=2, cnf=CNF_GRID2)
             self.checkbutton_bad        .grid(row=2, column=1, cnf=CNF_GRID2)
             self.label_previous_counter .grid(row=2, column=2, cnf=CNF_GRID2)
         self.entry_workout.grid(row=1, column=1, cnf=CNF_GRID2)
-        self.check_color()
-        self.next() # پارامترهایی از جنس کنتور که فرمول محاسباتی از بقیه کنتورها داشتن، مقدار قبلی دیتابیس رو مینوشتن و باید روی فیلدهای وابسته به فرمولشون کلیک میکردیم و جابه جا میشدیم تا فوکس اوت کنه و مقدارشون بر اساس داده هایی باشه که در صفحه در حال نمایش هستند. این تابع رو به خاطر همین صدا کردم که خودش این کار رو بکنه. اگه به باگ خوردم بازم ازش کپی پیست کنم. تابع خیلی خوبی هست :D
-        try:
-            create_tool_tip(self.lbl_info, text=self.counter_log.users_full_name)
-        except:
-            pass
  
-    def check_color(self, event=None):
+    def check_color(self, event=None): # inja
         w_l = self.warning_lower_bound
         w_u = self.warning_upper_bound
         a_l = self.alarm_lower_bound
@@ -1983,9 +1949,15 @@ class CounterWidget(Parameter, MyWindows):
                     'workout': self.workout
                 }) # برای پارامترهای با مقدار ثابت گفته بود فرقی نداره و برای هر دو تا همین رو ذخیره میکنم.
             except ValueError:
-                return
+                all_variables_current_value_and_workout[self.variable_name].update({
+                    'value': 0,
+                    'workout': 0
+                })
             except TypeError:
-                return
+                all_variables_current_value_and_workout[self.variable_name].update({
+                    'value': 0,
+                    'workout': 0
+                })
             finally:
                 self.check_color()
         elif self.type==PARAMETER_TYPES[0]:
@@ -2001,9 +1973,15 @@ class CounterWidget(Parameter, MyWindows):
                     'workout': self.workout
                 }) # گفته بود در هر صورت چه سالم باشه چه خراب تو ولیو خود مقدار جدید ذخیره بشه و ورک اوت هم همین طور. من هم ایفی که براش نوشته بودم رو دیگه پاک کردم.
             except ValueError:
-                return
+                all_variables_current_value_and_workout[self.variable_name].update({
+                    'value': self.a,
+                    'workout': 0
+                })
             except TypeError:
-                return
+                all_variables_current_value_and_workout[self.variable_name].update({
+                    'value': self.a,
+                    'workout': 0
+                })
             finally:
                 self.check_color()
         self.update_all_variables_current_value_and_workout()
@@ -2021,7 +1999,7 @@ class CounterWidget(Parameter, MyWindows):
                     elif p=='a':
                         values.append(counter_widget.a)
                     else:
-                        values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout'))))
+                        values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
                 counter_widget.answer = calculate_fn(counter_widget.formula, parameters, values)
             if counter_widget.type==PARAMETER_TYPES[2]:
                 counter_widget.entry_workout.config(text=counter_widget.answer)
@@ -2098,7 +2076,7 @@ class CounterWidget(Parameter, MyWindows):
             pass # هیچ وقت اتفاق نمیفته
         elif self.type==PARAMETER_TYPES[1]:
             self.entry_workout.delete(0, END)
-            self.entry_workout.insert(0, self.a)
+            self.entry_workout.insert(0, round4(self.a))
         elif self.type==PARAMETER_TYPES[0]:
             self.entry_current_counter.delete(0, END)
             self.entry_current_counter.insert(0, self.label_previous_counter['text'])
@@ -2119,88 +2097,6 @@ class CounterWidget(Parameter, MyWindows):
             self.update_workout()
 
 
-class MyToggleButton(Checkbutton):
-    def __init__(self, root, variable: BooleanVar, default='off', *args, bg_frame_on='#333333', bg_frame_off='#333333', bg_lable_on='green', bg_lable_off='red', bg_button_on='green', bg_button_off='red', fg_button_on="white", fg_button_off='black', font=('', 18), text_off='off', text_on='on', sleep=0.005, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.root=root
-        self.variable=variable
-        if default=='on':
-            self.default='on'
-            self.variable.set(True)
-        else:
-            self.default='off'
-            self.variable.set(False)
-        self.bg_frame_on=bg_frame_on
-        self.bg_frame_off=bg_frame_off
-        self.bg_lable_on=bg_lable_on
-        self.bg_lable_off=bg_lable_off
-        self.bg_button_on=bg_button_on
-        self.bg_button_off=bg_button_off
-        self.fg_button_on=fg_button_on
-        self.fg_button_off=fg_button_off
-        self.font=font
-        self.text_off=text_off
-        self.text_on=text_on
-        self.sleep=sleep
-        self.frame = Frame(self.root, bg=self.bg_frame_off, width=100, height=30)
-        self.label=Label(self.frame, bg=self.bg_lable_off)
-        self.button = Button(self.frame, font=self.font, text=self.text_off, bg=bg_button_off, disabledforeground=self.fg_button_off, relief='sunken', bd=6, command=self.toggle)
-        self.label.place(relx=0.01, relwidth=0.98, rely=0.05, relheight=0.9)
-        self.button.place(relx=0.51, relwidth=0.47, rely=0.07, relheight=0.86)
-        if self.variable.get():
-            self.frame.config(bg=self.bg_frame_on)
-            self.label.config(bg=self.bg_lable_on)
-            self.button.config(bg=self.bg_button_on, text=self.text_on, fg=self.fg_button_on, disabledforeground=self.fg_button_on, relief='raised')
-            self.button.place(relx=0.02)
-
-    def toggle(self, event=None):
-        if self.variable.get():
-            self.frame.config(bg=self.bg_frame_off)
-            self.label.config(bg=self.bg_lable_off)
-            self.button.config(bg=self.bg_button_off, fg=self.fg_button_off, disabledforeground=self.fg_button_off, relief='sunken', text=self.text_off)
-            Thread(target=self.move).start()
-        else:
-            self.frame.config(bg=self.bg_frame_on)
-            self.label.config(bg=self.bg_lable_on)
-            self.button.config(bg=self.bg_button_on, fg=self.fg_button_on, disabledforeground=self.fg_button_on, relief='raised', text=self.text_on)
-            Thread(target=self.move).start()
-        self.variable.set(not self.variable.get())
-            
-    def move(self):
-        self.button.config(state='disabled')
-        if self.variable.get():
-            x=0.51
-            while x>=0.01:
-                self.button.place(relx=x)
-                x-=0.01
-                sleep(self.sleep)
-                self.frame.update()
-        else:
-            x=0.02
-            while x<=0.52:
-                self.button.place(relx=x)
-                x+=0.01
-                sleep(self.sleep)
-                self.frame.update()
-        self.button.config(state='normal')
-            
-    def place(self, *args, **kwargs):
-        self.frame.place(*args, **kwargs)
-
-    def pack(self, *args, **kwargs):
-        self.frame.pack(*args, **kwargs)
-
-    def grid(self, *args, **kwargs):
-        self.frame.grid(*args, **kwargs)
-
-def my_tool_tip(frame: LabelFrame, text):
-    temp = frame['text']
-    def enter(event):
-        frame.config(text=text)
-    def leave(event):
-        frame.config(text=temp)
-    frame.bind('<Enter>', enter)
-    frame.bind('<Leave>', leave)
 ############################################### Stackoverflow ###############################################
 class ToolTip(object):
     def __init__(self, widget):

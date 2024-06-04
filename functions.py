@@ -44,7 +44,10 @@ def get_jnow():
 
 
 def round4(number:float) -> float|int:
-    number = float(number)
+    try:
+        number = float(number)
+    except ValueError:
+        return 0
     number = round(number, 4)
     if int(number)==number:
         return int(number)

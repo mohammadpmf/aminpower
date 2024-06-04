@@ -138,14 +138,17 @@ class Connection():
         return ("ok", 0)
     
     def delete_part(self, id):
+        query = "SELECT * FROM `tbl_places` WHERE (`section` = %s);"
+        values = (id, )
+        self.cursor.execute(query, values)
+        res = self.cursor.fetchone()
+        if res!=None:
+            return (f"مکان هایی برای این بخش ثبت شده اند. جهت حذف این بخش، ابتدا باید مکان های این بخش را حذف کنید", 2)
         query = "DELETE FROM `tbl_sections` WHERE (`id` = %s);"
         values = (id, )
-        try:
-            self.cursor.execute(query, values)
-            self.connection.commit()
-            return ("ok", 0)
-        except pymysql.err.IntegrityError as error:
-            return (f"مکان هایی برای این بخش ثبت شده اند. جهت حذف این بخش، ابتدا باید مکان های این بخش را حذف کنید", error)
+        self.cursor.execute(query, values)
+        self.connection.commit()
+        return ("ok", 0)
 
     def create_place(self, title, part_id):
         query = "INSERT INTO `tbl_places` (`title`, `section`, `order`) VALUES (%s, %s, 0);"
@@ -176,14 +179,17 @@ class Connection():
             return (f"مکان {new_name} برای بخش {part_name} قبلا ثبت شده است", error)
 
     def delete_place(self, id):
+        query = "SELECT * FROM `tbl_parameters` WHERE (`place` = %s);"
+        values = (id, )
+        self.cursor.execute(query, values)
+        res = self.cursor.fetchone()
+        if res!=None:
+            return (f"پارامترهایی برای این مکان ثبت شده اند. جهت حذف این مکان، ابتدا باید تمام پارامترهای این این مکان را حذف کنید", 2)
         query = "DELETE FROM `tbl_places` WHERE (`id` = %s);"
         values = (id, )
-        try:
-            self.cursor.execute(query, values)
-            self.connection.commit()
-            return ("ok", 0)
-        except pymysql.err.IntegrityError as error:
-            return (f"پارامترهایی برای این مکان ثبت شده اند. جهت حذف این مکان، ابتدا باید تمام پارامترهای این این مکان را حذف کنید", error)
+        self.cursor.execute(query, values)
+        self.connection.commit()
+        return ("ok", 0)
 
     def update_place_sort(self, id, order):
         query = "UPDATE `tbl_places` SET `order` = %s WHERE (`id` = %s);"
@@ -224,14 +230,17 @@ class Connection():
         return ("ok", 0)
 
     def delete_parameter(self, id):
+        query = "SELECT * FROM `tbl_parameters_log` WHERE `parameter_id`=%s;"
+        values = (id, )
+        self.cursor.execute(query, values)
+        res = self.cursor.fetchone()
+        if res!=None:
+            return (f"لاگ هایی برای این پارامتر ثبت شده اند. از طریق این برنامه نمیتوانید این پارامتر را حذف کنید. چون در ساختار دیتابیس مشکل ایجاد میکند. مدیر دیتابیس ابتدا باید لاگ های مربوط به این پارامتر را دستی حذف کند و سپس این پارامتر قابل حذف کردن است", 2)
         query = "DELETE FROM `tbl_parameters` WHERE (`id` = %s);"
         values = (id, )
-        try:
-            self.cursor.execute(query, values)
-            self.connection.commit()
-            return ("ok", 0)
-        except pymysql.err.IntegrityError as error:
-            return (f"لاگ هایی برای این پارامتر ثبت شده اند. از طریق این برنامه نمیتوانید این پارامتر را حذف کنید. چون در ساختار دیتابیس مشکل ایجاد میکند. مدیر دیتابیس ابتدا باید لاگ های مربوط به این پارامتر را دستی حذف کند و سپس این پارامتر قابل حذف کردن است", error)
+        self.cursor.execute(query, values)
+        self.connection.commit()
+        return ("ok", 0)
 
     def get_part_by_title(self, title):
         query = "SELECT * FROM `tbl_sections` WHERE title=%s;"
