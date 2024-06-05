@@ -1365,7 +1365,7 @@ class StaffWindow(MyWindows):
                 break
 
     def confirm_log_insert(self, event=None):
-        global sheet_state, date_picker
+        global sheet_state, date_picker, all_counter_widgets
         self.disable_confirm_buttons()
         if date_picker.get_date() == None:
             msb.showerror("خطا", "لطفا تاریخ را به درستی انتخاب کنید")
@@ -1411,6 +1411,7 @@ class StaffWindow(MyWindows):
     # تابی برای بررسی این که اعداد با ظاهر فعلی در صفحه در دیتابیس ذخیره شوند یا نه
     # اگر اشتباه باشند که اجازه نمیدهد. اگر منفی باشند کاربر باید تایید کند تا به مرحله بعد برود.
     def precheck_before_confirm(self, part_name):
+        global all_counter_widgets
         negative_numbers = 0
         for counter_widget in list(all_counter_widgets.values()):
             counter_widget: CounterWidget
@@ -1443,7 +1444,7 @@ class StaffWindow(MyWindows):
         return "ok"
 
     def confirm_log_update(self):
-        global date_picker
+        global date_picker, all_counter_widgets
         self.disable_confirm_buttons()
         if date_picker.get_date() == None:
             msb.showerror("خطا", "لطفا تاریخ را به درستی انتخاب کنید")
@@ -1639,6 +1640,7 @@ class StaffWindow(MyWindows):
         self.check_colors_and_correct_them()
     
     def check_colors_and_correct_them(self):
+        global all_counter_widgets
         for counter_widget in list(all_counter_widgets.values()):
             counter_widget: CounterWidget
             counter_widget.check_color()
@@ -1841,7 +1843,7 @@ class PartWidget(MyWindows):
                         place_title=counter.place_title,
                         part_title=counter.part_title,
                         )
-                    all_counter_widgets[c] = c
+                    all_counter_widgets[c.variable_name] = c
                     c.frame.bind("<MouseWheel>", self.on_mousewheel)
                     c.info_widget.bind("<MouseWheel>", self.on_mousewheel)
                     c.lbl_info.bind("<MouseWheel>", self.on_mousewheel)
@@ -1955,64 +1957,47 @@ class CounterWidget(Parameter, MyWindows):
                 self.entry_workout.config(state='normal', bg=bg)
           
     def next(self, event=None):
-        for _ in range(10):
+        for _ in range(6):
             if self.type==PARAMETER_TYPES[2]: # نمیتونه باشه. نوشتم که بدونم بررسی شده. رو محاسباتی ها نمیشه اینتر زد.
                 pass
             elif self.type==PARAMETER_TYPES[1]:
                 try:
-                    self.workout = self.entry_workout.get().strip()
-                    self.workout = float(self.workout)
+                    self.workout = float(self.entry_workout.get().strip())
                 except ValueError:
                     self.workout = 0
-                    print("Unhandled exception 1 :D")
                 except TypeError:
                     self.workout = 0
-                    print("Unhandled exception 2 :D")
-                finally:
-                    self.check_color()
+                self.check_color()
             elif self.type==PARAMETER_TYPES[0]:
-                self.a = self.label_previous_counter['text']
-                self.a = float(self.a)
+                self.a = float(self.label_previous_counter['text'])
                 try:
-                    self.b = self.entry_current_counter.get().strip()
-                    self.b = float(self.b)
+                    self.b = float(self.entry_current_counter.get().strip())
                 except ValueError:
                     self.b = 0
-                    print("Unhandled exception 3 :D")
                 except TypeError:
                     self.b = 0
-                    print("Unhandled exception 4 :D")
-                finally:
-                    self.check_color()
+                self.check_color()
                 try:
-                    self.workout = self.entry_workout.get().strip()
-                    self.workout = float(self.workout)
+                    self.workout = float(self.entry_workout.get().strip())
                 except ValueError:
-                    print("Unhandled exception 5 :D")
                     self.workout = 0
                 except TypeError:
-                    print("Unhandled exception 6 :D")
                     self.workout = 0
-                finally:
-                    self.check_color()
+                self.check_color()
             self.update_all_variables_current_value_and_workout()
     
     def update_all_variables_current_value_and_workout(self):
         global all_counter_widgets
         for counter_widget in list(all_counter_widgets.values()):
-            counter_widget:CounterWidget
-            if counter_widget.type==PARAMETER_TYPES[1]:
-                pass
-                # لازم نیست کاری بکنیم. چون پارامترهای ثابت با تغییر بقیه تغییر نمیکنند.
-                # اگر خودشون تغییر بکنند که همون لحظه با کی ریلیز بایندش کردیم و تغییر میکنه
-                # اما تغییر بقیه باعث تغییر پارامتر ثابت نمیشه. پس الکی بررسیش نمیکنیم.
-            else:
+            counter_widget: CounterWidget
+            if counter_widget.type==PARAMETER_TYPES[2]:
                 parameters = get_formula_parameters(counter_widget.formula)
                 values = []
                 for p in parameters:
-                    if p=='b':
-                        values.append(counter_widget.b)
-                    elif p=='a':
+                    # تو فرمول محاسباتی نمیشه از مقدار امروز خودش استفاده کرد. تا بینهایت پیش میره. پس نباید باشه
+                    # if p=='b':
+                    #     values.append(counter_widget.b)
+                    if p=='a':
                         values.append(counter_widget.a)
                     else:
                         temp:CounterWidget = all_counter_widgets.get(p)
@@ -2021,19 +2006,41 @@ class CounterWidget(Parameter, MyWindows):
                         else:
                             values.append(0)
                 counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
-                if counter_widget.type==PARAMETER_TYPES[2]:
-                    counter_widget.entry_workout.config(text=counter_widget.workout)
-                elif counter_widget.type==PARAMETER_TYPES[0]:
-                    if counter_widget.boolean_var_bad.get()==False:
-                        counter_widget.entry_workout.config(state='normal')
-                        counter_widget.entry_workout.delete(0, END)
-                        counter_widget.entry_workout.insert(0, counter_widget.workout)
-                        counter_widget.entry_workout.config(state='readonly')
-                    else:
-                        pass
+                counter_widget.entry_workout.config(text=counter_widget.workout)
+            elif counter_widget.type==PARAMETER_TYPES[1]:
+                pass
+                # لازم نیست کاری بکنیم. چون پارامترهای ثابت با تغییر بقیه تغییر نمیکنند.
+                # اگر خودشون تغییر بکنند که همون لحظه تغییر میکنه
+                # اما تغییر بقیه باعث تغییر پارامتر ثابت نمیشه. پس الکی بررسیش نمیکنیم.
+            elif counter_widget.type==PARAMETER_TYPES[0]:
+                if counter_widget.boolean_var_bad.get()==False:
+                    parameters = get_formula_parameters(counter_widget.formula)
+                    values = []
+                    for p in parameters:
+                        try:
+                            counter_widget.b=float(counter_widget.entry_current_counter.get())
+                        except ValueError:
+                            counter_widget.b=0
+                        counter_widget.a=float(counter_widget.label_previous_counter['text'])
+                        if p=='b':
+                            values.append(counter_widget.b)
+                        elif p=='a':
+                            values.append(counter_widget.a)
+                        else:
+                            temp:CounterWidget = all_counter_widgets.get(p)
+                            if temp!=None:
+                                values.append(float(temp.workout))
+                            else:
+                                values.append(0)
+                    counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
+                    counter_widget.entry_workout.config(state='normal')
+                    counter_widget.entry_workout.delete(0, END)
+                    counter_widget.entry_workout.insert(0, counter_widget.workout)
+                    counter_widget.entry_workout.config(state='readonly')
             counter_widget.check_color()
 
     def update_workout(self, event=None):
+        global all_counter_widgets
         if event and event.keysym=='Return': # باگ داشت وقتی اینتر میزدیم آپدیت میشد. اما چون دکمه اینتر ول شده بود دوباره میومد این رو صدا میکرد و به هم میزد همون کنتور ویجت رو. به خاطر همین اینتر رو ازش حذف کردم که موقعی که انگشت رو از رو اینتر برداشتیم آپدیت نکنه.
             # حالا اگه رو دکمه کپی میزدیم هیچ ایونتی ارسال نمیشد و این ایف ارور میداد. پس گفتم اگه ایونتی وجود داشت و اینتر بود ریترن کن. در غیر این صورت کارت رو انجام بده.
             return
@@ -2080,16 +2087,14 @@ class CounterWidget(Parameter, MyWindows):
                 self.entry_workout.insert(0, self.workout)
                 self.entry_workout.config(state='disabled')
                 self.check_color()
-        # for _ in range(10):
-        #     self.next()
-        # :D
+        self.next()
         # اینجا یه بار که تابع نکست رو کال میکردم خودش درست میشد. اما بقیه ها نه. باید رو یکی دیگه کلیک میکردم.
         # هاور هم گذاشتم باید دوبار ماوس رو میبردیم بیرون که خیلی جالب نبود.
         # بهترین راه حل به نظرم این بود که دو بار خودم نکست رو پشت سر هم صدا کنم که هم خودش همون لحظه آپدیت
         # بشه و هم کنتورهایی که بهش وابسته هستند.
         # وقتی پارامترهای بیشتری به هم وابسته شدند همین کار رو باید تکرار میکردیم. برای موردی که خودش گفته بود ۳ تا
         # کافی بود. خودم چند تا دیگه گذاشتم دیدم باز کار نمیکنه به خاطر همین ۶ بار کال کردم درست شد. برای محکم کاری
-        # ۱۰ بار صداش کردم. اگه سرعت برنامه  کند شد هماهنگ کنم باهاش ببینم حداکثر چند بار لازمه که اضافه تکرارش نکنم.
+        # ۶ بار صداش کردم. اگه سرعت برنامه  کند شد هماهنگ کنم باهاش ببینم حداکثر چند بار لازمه که اضافه تکرارش نکنم.
         # نکته آخر این که وقتی با فوکس اوت جا به جا میشدیم هنوز این مشکل بود. به جای این که اونجا هم همین کار رو کنم، این حلقه 
         # رو داخل خود تابع نکست نوشتم که این تکرار رو انجام بده.
 
