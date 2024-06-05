@@ -2,7 +2,7 @@ from ui_settings import *
 from PIL import Image, ImageTk
 from connection import Connection
 from functions import calculate_fn, get_formula_parameters, how_many_times_parameters_variable_name_used_in_other_formulas, what_is_variable_name_problem, what_is_formula_problem, get_jnow, round4, jdatetime, datetime
-from models import Part, Place, Staff, Parameter
+from models import Part, Place, Staff, Parameter, ParameterLog
 import win32api
 from threading import Thread
 from time import sleep
@@ -1294,6 +1294,10 @@ class StaffWindow(MyWindows):
         global all_counter_widgets
         length = len(all_counter_widgets)
         for i in range(index+1, length):
+            if i==length-1:
+                self.btn_confirm_counter_log_insert.focus_set()
+                self.btn_confirm_counter_log_update.focus_set()
+                return
             if all_counter_widgets[i].type==PARAMETER_TYPES[2]:
                 continue
             elif all_counter_widgets[i].type==PARAMETER_TYPES[1]:
@@ -1353,11 +1357,10 @@ class StaffWindow(MyWindows):
     def set_logged_parts_names(self):
         global date_picker
         self.logged_parts_names.clear()
-        temp_date = date_picker.get_date()
         # for part in self.all_parts:
         #     part: Part
         #     last_log_date = self.connection.get_last_log_date_of_part_by_part_id(part.id)
-        #     if last_log_date!=None and temp_date<=last_log_date:
+        #     if last_log_date!=None and date_picker.get_date()<=last_log_date:
         #         self.logged_parts_names.add(part.title)
         # این کوئری بالا چون جوین کرده بودم هر بار 0.127 ثانیه تقریبا طول میکشید که خب برای ۵ تا بخش
         # میشد تقریبا 0.7 ثانیه و عملا کند تر میشد. به خاطر همین برگردوندمش به حالت قبلی که تو ورک بنچ
@@ -1369,15 +1372,14 @@ class StaffWindow(MyWindows):
             for counter in counters:
                 counter: Parameter
                 last_log = self.connection.get_last_log_of_parameter_by_id(counter.id)
-                if last_log!=None and temp_date<=last_log:
+                if last_log!=None and date_picker.get_date()<=last_log:
                     self.logged_parts_names.add(counter.part_title)
                 break
 
     def confirm_log_insert(self, event=None):
-        global sheet_state
+        global sheet_state, date_picker
         self.disable_confirm_buttons()
-        temp_date = date_picker.get_date()
-        if temp_date == None:
+        if date_picker.get_date() == None:
             msb.showerror("خطا", "لطفا تاریخ را به درستی انتخاب کنید")
             self.btn_confirm_counter_log_insert.config(state='normal', relief='raised')
             self.enable_for_safety()
@@ -1401,10 +1403,10 @@ class StaffWindow(MyWindows):
             counter_widget: CounterWidget
             if counter_widget.part_title==part_name:
                 if counter_widget.type in PARAMETER_TYPES[1:3]:
-                    result_message, ـ = counter_widget.connection.create_parameter_log(counter_widget.workout, counter_widget.workout, 1, temp_date, counter_widget.id, self.user.id)
+                    result_message, ـ = counter_widget.connection.create_parameter_log(counter_widget.workout, counter_widget.workout, 1, date_picker.get_date(), counter_widget.id, self.user.id)
                 elif counter_widget.type==PARAMETER_TYPES[0]:
                     is_ok = 1 if counter_widget.boolean_var_bad.get()==False else 0
-                    result_message, ـ = counter_widget.connection.create_parameter_log(counter_widget.b, counter_widget.workout, is_ok, temp_date, counter_widget.id, self.user.id)
+                    result_message, ـ = counter_widget.connection.create_parameter_log(counter_widget.b, counter_widget.workout, is_ok, date_picker.get_date(), counter_widget.id, self.user.id)
         if result_message == "ok":
             message = f"اطلاعات بخش {part_name} با موفقیت در دیتابیس اضافه شدند"
             msb.showinfo('success', message)
@@ -1453,9 +1455,9 @@ class StaffWindow(MyWindows):
         return "ok"
 
     def confirm_log_update(self):
+        global date_picker
         self.disable_confirm_buttons()
-        temp_date = date_picker.get_date()
-        if temp_date == None:
+        if date_picker.get_date() == None:
             msb.showerror("خطا", "لطفا تاریخ را به درستی انتخاب کنید")
             self.btn_confirm_counter_log_update.config(state='normal', relief='raised')
             self.enable_for_safety()
@@ -1479,25 +1481,32 @@ class StaffWindow(MyWindows):
             counter_widget: CounterWidget
             if counter_widget.part_title==part_name:
                 if counter_widget.type in PARAMETER_TYPES[1:3]:
-                    result_message, ـ = counter_widget.connection.update_parameter_log(counter_widget.workout, counter_widget.workout, 1, temp_date, counter_widget.id, self.user.id)
+                    result_message, ـ = counter_widget.connection.update_parameter_log(counter_widget.workout, counter_widget.workout, 1, date_picker.get_date(), counter_widget.id, self.user.id)
                 elif counter_widget.type==PARAMETER_TYPES[0]:
                     is_ok = 1 if counter_widget.boolean_var_bad.get()==False else 0
-                    result_message, ـ = counter_widget.connection.update_parameter_log(counter_widget.b, counter_widget.workout, is_ok, temp_date, counter_widget.id, self.user.id)
+                    result_message, ـ = counter_widget.connection.update_parameter_log(counter_widget.b, counter_widget.workout, is_ok, date_picker.get_date(), counter_widget.id, self.user.id)
         if result_message == "ok":
             message = f"اطلاعات بخش {part_name} با موفقیت در دیتابیس ویرایش شدند"
             msb.showinfo('success', message)
             self.btn_confirm_counter_log_update.config(state='normal', relief='raised')
             self.enable_for_safety()
-            self.update_next_logs_if_necessary()
+            # self.update_next_logs_if_necessary()
         else:
             self.fill_counter_widgets()
             msb.showerror("ارور", result_message)
 
     def update_next_logs_if_necessary(self):
-        global all_variables_current_value_and_workout, all_counter_widgets
-        temp_date = date_picker.get_date()
-        updated_logs = self.connection.get_parameters_log_by_date(temp_date)
-        updated_next_logs = self.connection.get_parameters_next_log_by_date(temp_date)
+        global all_variables_current_value_and_workout, all_counter_widgets, date_picker
+        updated_logs = self.connection.get_parameters_log_by_date(date_picker.get_date())
+        updated_next_logs = self.connection.get_parameters_next_log_by_date(date_picker.get_date())
+        # for key, value in updated_logs.items():
+        #     value: ParameterLog
+        #     print(f"{key:10}{value.date}  {value.value:<20}{value.workout:<20}{value.type:<20}")
+        # print('-'*90)
+        # for key, value in updated_next_logs.items():
+        #     value: ParameterLog
+        #     print(f"{key:10}{value.date}  {value.value:<20}{value.workout:<20}{value.type:<20}")
+        # print('-'*90)
         for counters in self.all_counters_2d:
             for counter in counters:
                 counter: Parameter
@@ -1570,7 +1579,7 @@ class StaffWindow(MyWindows):
                 self.refresh_ui()
     
     def fill_counter_widgets(self, event=None):
-        global all_counter_widgets, sheet_state
+        global all_counter_widgets, sheet_state, date_picker, all_variables_current_value_and_workout
         self.btn_confirm_counter_log_insert.config(state='disabled', relief='flat')
         self.btn_confirm_counter_log_update.config(state='disabled', relief='flat')
         self.disable_for_safety()
@@ -1583,13 +1592,23 @@ class StaffWindow(MyWindows):
                 counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'])
             else:
                 counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'], readonlybackground=COLORS['ALARM_COLOR'])
-            if counter_widget.part_title in self.logged_parts_names:
+            if sheet_state=='update':
                 counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
                 counter_widget.counter_log = counter_widget.connection.get_parameter_log_by_parameter_id_and_date(counter_widget.id , date_picker.get_date())
                 counter_widget.b = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('value'))
                 counter_widget.workout = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('workout'))
+                # for key, value in all_variables_current_value_and_workout.items():
+                #     print(key, value)
+                # all_variables_current_value_and_workout[counter_widget.variable_name] = {
+                #     'value': counter_widget.b,
+                #     'workout': counter_widget.workout,
+                # }
+                # print('-'*100)
+                # for key, value in all_variables_current_value_and_workout.items():
+                #     print(key, value) 
+                # inja dorost nashod. تو روزهای ثبت شده جای دیگه کلیک کنم بعد خارج شم اشتباه میشن.
                 if counter_widget.type==PARAMETER_TYPES[2]:
-                    counter_widget.entry_workout.config(text=counter_widget.workout)
+                    counter_widget.entry_workout.config(text=round4(counter_widget.workout))
                 elif counter_widget.type==PARAMETER_TYPES[1]:
                     counter_widget.entry_workout.delete(0, END)
                     counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
@@ -1606,7 +1625,7 @@ class StaffWindow(MyWindows):
                     elif counter_widget.counter_log:
                         counter_widget.boolean_var_bad.set(False)
                         counter_widget.entry_workout.config(state='disabled')
-            else:
+            elif sheet_state=='insert':
                 counter_widget.a = float(all_variables_current_value_and_workout.get(counter_widget.variable_name).get('value'))
                 if counter_widget.type==PARAMETER_TYPES[1]:
                     if counter_widget.default_value==DEFAULT_VALUES[0]:
@@ -1629,8 +1648,22 @@ class StaffWindow(MyWindows):
                             counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
                         elif counter_widget.default_value==DEFAULT_VALUES[2]:
                             pass
+                        parameters = get_formula_parameters(counter_widget.formula)
+                        values = []
+                        for p in parameters:
+                            if p=='b':
+                                values.append(counter_widget.b)
+                            elif p=='a':
+                                values.append(counter_widget.a)
+                            else:
+                                try:
+                                    values.append(round4(float(all_variables_current_value_and_workout.get(p).get('workout', 0))))
+                                except ValueError:
+                                    values.append(0) # وقتی کلش انتری ورک اوت خالی بود استرینگ خالی میگرفت که نمیتونست به فلوت تبدیل کنه و ارور میداد و اصلا به گت دیکشنری نمیرسید. به خاطر همین دستی ۰ گذاشتم. چون به هر حال چرت نوشته بود داخل اون و مقدارش باید ۰ محسوب میشد.
+                        counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
                         counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
                         counter_widget.entry_workout.delete(0, END)
+                        counter_widget.entry_workout.insert(0, counter_widget.workout)
                         counter_widget.entry_workout.config(state='disabled')
             try:
                 create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
@@ -1657,6 +1690,7 @@ class DatePicker(MyWindows):
     years_list = [i for i in range(1350, 1451)]
     def __init__(self, connection: Connection, root: Tk):
         super().__init__(connection, root)
+        global date_picker
         self.img_calendar       = Image.open(r'icons/calendar.png')
         self.img_previous_day   = Image.open(r'icons/right.png')
         self.img_next_day       = Image.open(r'icons/left.png')
@@ -1957,54 +1991,56 @@ class CounterWidget(Parameter, MyWindows):
           
     def next(self, event=None):
         global all_variables_current_value_and_workout
-        if self.type==PARAMETER_TYPES[2]: # نمیتونه باشه. نوشتم که بدونم بررسی شده. رو محاسباتی ها نمیشه اینتر زد.
-            pass
-        elif self.type==PARAMETER_TYPES[1]:
-            try:
-                self.workout = self.entry_workout.get().strip()
-                self.workout = float(self.workout)
-                all_variables_current_value_and_workout[self.variable_name].update({
-                    'value': self.workout,
-                    'workout': self.workout
-                }) # برای پارامترهای با مقدار ثابت گفته بود فرقی نداره و برای هر دو تا همین رو ذخیره میکنم.
-            except ValueError:
-                all_variables_current_value_and_workout[self.variable_name].update({
-                    'value': 0,
-                    'workout': 0
-                })
-            except TypeError:
-                all_variables_current_value_and_workout[self.variable_name].update({
-                    'value': 0,
-                    'workout': 0
-                })
-            finally:
-                self.check_color()
-        elif self.type==PARAMETER_TYPES[0]:
-            try:
-                self.a = self.label_previous_counter['text']
-                self.b = self.entry_current_counter.get().strip()
-                self.workout = self.entry_workout.get().strip()
-                self.a = float(self.a)
-                self.b = float(self.b)
-                self.workout = float(self.workout)
-                all_variables_current_value_and_workout[self.variable_name].update({
-                    'value': self.b,
-                    'workout': self.workout
-                }) # گفته بود در هر صورت چه سالم باشه چه خراب تو ولیو خود مقدار جدید ذخیره بشه و ورک اوت هم همین طور. من هم ایفی که براش نوشته بودم رو دیگه پاک کردم.
-            except ValueError:
-                all_variables_current_value_and_workout[self.variable_name].update({
-                    'value': self.a,
-                    'workout': 0
-                })
-            except TypeError:
-                all_variables_current_value_and_workout[self.variable_name].update({
-                    'value': self.a,
-                    'workout': 0
-                })
-            finally:
-                self.check_color()
-        self.update_all_counter_widgets()
-        self.update_all_variables_current_value_and_workout()
+        for _ in range(10):
+            if self.type==PARAMETER_TYPES[2]: # نمیتونه باشه. نوشتم که بدونم بررسی شده. رو محاسباتی ها نمیشه اینتر زد.
+                pass
+            elif self.type==PARAMETER_TYPES[1]:
+                try:
+                    self.workout = self.entry_workout.get().strip()
+                    self.workout = float(self.workout)
+                    all_variables_current_value_and_workout[self.variable_name].update({
+                        'value': self.workout,
+                        'workout': self.workout
+                    }) # برای پارامترهای با مقدار ثابت گفته بود فرقی نداره و برای هر دو تا همین رو ذخیره میکنم.
+                except ValueError:
+                    all_variables_current_value_and_workout[self.variable_name].update({
+                        'value': 0,
+                        'workout': 0
+                    })
+                except TypeError:
+                    all_variables_current_value_and_workout[self.variable_name].update({
+                        'value': 0,
+                        'workout': 0
+                    })
+                finally:
+                    self.check_color()
+            elif self.type==PARAMETER_TYPES[0]:
+                try:
+                    self.a = self.label_previous_counter['text']
+                    self.b = self.entry_current_counter.get().strip()
+                    self.workout = self.entry_workout.get().strip()
+                    # print(self.a, self.b, self.workout) inja dorost nashod
+                    self.a = float(self.a)
+                    self.b = float(self.b)
+                    self.workout = float(self.workout)
+                    all_variables_current_value_and_workout[self.variable_name].update({
+                        'value': self.b,
+                        'workout': self.workout
+                    }) # گفته بود در هر صورت چه سالم باشه چه خراب تو ولیو خود مقدار جدید ذخیره بشه و ورک اوت هم همین طور. من هم ایفی که براش نوشته بودم رو دیگه پاک کردم.
+                except ValueError:
+                    all_variables_current_value_and_workout[self.variable_name].update({
+                        'value': self.a,
+                        'workout': 0
+                    })
+                except TypeError:
+                    all_variables_current_value_and_workout[self.variable_name].update({
+                        'value': self.a,
+                        'workout': 0
+                    })
+                finally:
+                    self.check_color()
+            self.update_all_counter_widgets()
+            self.update_all_variables_current_value_and_workout()
     
     def update_all_counter_widgets(self):
         for  counter_widget in all_counter_widgets:
@@ -2100,8 +2136,8 @@ class CounterWidget(Parameter, MyWindows):
                     return
                 finally:
                     self.check_color()
-        for i in range(10):
-            self.next()
+        # for _ in range(10):
+        #     self.next()
         # :D
         # اینجا یه بار که تابع نکست رو کال میکردم خودش درست میشد. اما بقیه ها نه. باید رو یکی دیگه کلیک میکردم.
         # هاور هم گذاشتم باید دوبار ماوس رو میبردیم بیرون که خیلی جالب نبود.
@@ -2110,6 +2146,8 @@ class CounterWidget(Parameter, MyWindows):
         # وقتی پارامترهای بیشتری به هم وابسته شدند همین کار رو باید تکرار میکردیم. برای موردی که خودش گفته بود ۳ تا
         # کافی بود. خودم چند تا دیگه گذاشتم دیدم باز کار نمیکنه به خاطر همین ۶ بار کال کردم درست شد. برای محکم کاری
         # ۱۰ بار صداش کردم. اگه سرعت برنامه  کند شد هماهنگ کنم باهاش ببینم حداکثر چند بار لازمه که اضافه تکرارش نکنم.
+        # نکته آخر این که وقتی با فوکس اوت جا به جا میشدیم هنوز این مشکل بود. به جای این که اونجا هم همین کار رو کنم، این حلقه 
+        # رو داخل خود تابع نکست نوشتم که این تکرار رو انجام بده.
 
     def copy_paste(self, event=None):
         if self.type==PARAMETER_TYPES[2]:
