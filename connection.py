@@ -334,8 +334,7 @@ class Connection():
             return temp
         return ParameterLog(*temp)
 
-    # def get_parameters_log_by_date(self, date) -> dict[ParameterLog|None]:
-    def get_parameters_log_by_date(self, date):
+    def get_parameters_log_by_date(self, date) -> dict[ParameterLog|None]:
         self.set_max_date_into_temp_table(date)
         query = "SELECT `value`, `workout`, `is_ok`, `date`, `date_time_modified`, `tbl_parameters_log`.`parameter_id`, `tbl_parameters_log`.`user_id`, `tbl_parameters_log`.`id`, `tbl_users`.`name` AS `users_name`, `tbl_users`.`surname` AS `users_surname`, `tbl_parameters`.`type`, `tbl_parameters`.`variable_name` FROM (`tbl_parameters` JOIN `tbl_parameters_max_date` ON (`tbl_parameters`.`id`=`tbl_parameters_max_date`.`parameter_id`)) JOIN `tbl_parameters_log` ON (`tbl_parameters`.`id`=`tbl_parameters_log`.`parameter_id` AND `tbl_parameters_max_date`.`max_date`=`tbl_parameters_log`.`date`) JOIN `tbl_users` ON (`tbl_parameters_log`.`user_id`=`tbl_users`.`id`);"
         self.cursor.execute(query)
@@ -530,43 +529,6 @@ class Connection():
         values = (selected_date, last_year_date)
         self.cursor.execute(query, values)
         self.connection.commit()
-
-    def get_all_parameters_current_value_and_workout(self, selected_date):
-        self.set_max_date_into_temp_table(selected_date)
-        query = "SELECT `tbl_parameters`.`id`, `variable_name`, `value`, `workout` FROM (`tbl_parameters` JOIN `tbl_parameters_max_date` ON (`tbl_parameters`.`id`=`tbl_parameters_max_date`.`parameter_id`)) JOIN `tbl_parameters_log` ON (`tbl_parameters`.`id`=`tbl_parameters_log`.`parameter_id` AND `tbl_parameters_max_date`.`max_date`=`tbl_parameters_log`.`date`);"
-        self.cursor.execute(query)
-        temp_dict = {}
-        for item in self.cursor.fetchall():
-            try:
-                # id = item[0] # به کارمون نمیاد دیگه. ولی گذاشتم که باشه
-                variable_name = item[1]
-                value = item[2]
-                workout = item[3]
-                temp_dict[variable_name]={
-                    'value': value,
-                    'workout': workout
-                }
-            except:
-                temp_dict[variable_name]={
-                    'value': 0,
-                    'workout': 0
-                }
-        # تا اینجای کار، آخرین مقدار و کارکرد رو برای اونهایی که ثبت شدند گرفتیم. اما
-        # تو برنامه من برای همه رو میخواستم حتی اونهایی که هیچ لاگی ندارند که اگه بخوان
-        # آپدیت بشن راحت بشه باهاشون کار کرد و خالی نباشند. پس تمامشون رو از تو دیتابیس
-        # میگیریم و اونهایی هم که نبودن بهشون ۰ میدیم
-        query = "SELECT `id`, `variable_name` FROM `tbl_parameters`;"
-        self.cursor.execute(query)
-        for item in self.cursor.fetchall():
-            id=item[0]
-            variable_name=item[1]
-            temp_dict.setdefault(variable_name, {
-                'value': 0,
-                'workout': 0,
-            })
-            # اونایی که بودند و ست شدند تغییری نمیکنند. اونایی هم که نبودند به ۰ ست میشن.
-        return temp_dict
-
 
     def get_all_parameters_formula(self):
         query = "SELECT `formula` FROM `tbl_parameters`;"

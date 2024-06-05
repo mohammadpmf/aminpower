@@ -1265,7 +1265,7 @@ class StaffWindow(MyWindows):
             for place in self.all_places[i]:
                 counters = self.connection.get_all_parameters_of_this_part_and_place(part_id=place.part_id, place_id=place.id)
                 places_with_counters.append(counters)
-            parts_tab.append(PartWidget(self.connection, tabs_list[i], places_with_counters))
+            parts_tab.append(PartWidget(self.connection, tabs_list[i], places_with_counters, self))
             parts_tab[i].pack()
         self.tab_control_frame.pack(expand=1, fill="both")
         for i, counter_widget in enumerate(list(all_counter_widgets.values())):
@@ -1580,15 +1580,17 @@ class StaffWindow(MyWindows):
                 counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'])
             else:
                 counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'], readonlybackground=COLORS['ALARM_COLOR'])
+            counter_widget.counter_log = counter_widget.connection.get_parameter_log_by_parameter_id_and_date(counter_widget.id, date_picker.get_date())
+            if counter_widget.counter_log!=None:
+                counter_widget.b = counter_widget.counter_log.value
+                counter_widget.workout = counter_widget.counter_log.workout
+            else:
+                counter_widget.b = 0
+                counter_widget.workout = 0
+            counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
+            if counter_widget.a==None:
+                counter_widget.a=0
             if sheet_state=='update':
-                counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
-                counter_widget.counter_log = counter_widget.connection.get_parameter_log_by_parameter_id_and_date(counter_widget.id , date_picker.get_date())
-                if counter_widget.counter_log!=None:
-                    counter_widget.b = counter_widget.counter_log.value
-                    counter_widget.workout = counter_widget.counter_log.workout
-                else:
-                    counter_widget.b = 0
-                    counter_widget.workout = 0
                 if counter_widget.type==PARAMETER_TYPES[2]:
                     counter_widget.entry_workout.config(text=round4(counter_widget.workout))
                 elif counter_widget.type==PARAMETER_TYPES[1]:
@@ -1608,45 +1610,44 @@ class StaffWindow(MyWindows):
                         counter_widget.boolean_var_bad.set(False)
                         counter_widget.entry_workout.config(state='disabled')
             elif sheet_state=='insert':
-                if counter_widget.type==PARAMETER_TYPES[1]:
+                if counter_widget.type==PARAMETER_TYPES[2]:
+                    counter_widget.entry_workout.config(text='', bg=COLORS['ALARM_COLOR'])
+                elif counter_widget.type==PARAMETER_TYPES[1]:
                     if counter_widget.default_value==DEFAULT_VALUES[0]:
                         counter_widget.entry_workout.delete(0, END)
-                        counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
+                        counter_widget.entry_workout.insert(0, round4(counter_widget.counter_log.workout))
                     elif counter_widget.default_value==DEFAULT_VALUES[1]:
                         counter_widget.entry_workout.delete(0, END)
                         counter_widget.entry_workout.insert(0, round4(DEFAULT_VALUES[1]))
                     elif counter_widget.default_value==DEFAULT_VALUES[2]:
                         counter_widget.entry_workout.delete(0, END)
-                else:
-                    if counter_widget.type==PARAMETER_TYPES[2]:
-                        counter_widget.entry_workout.config(text='', bg=COLORS['ALARM_COLOR'])
-                    elif counter_widget.type==PARAMETER_TYPES[0]:
-                        counter_widget.label_previous_counter.config(text=round4(counter_widget.a))
-                        counter_widget.entry_current_counter.delete(0, END)
-                        if counter_widget.default_value==DEFAULT_VALUES[0]:
-                            counter_widget.entry_current_counter.insert(0, round4(counter_widget.a))
-                        elif counter_widget.default_value==DEFAULT_VALUES[1]:
-                            counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
-                        elif counter_widget.default_value==DEFAULT_VALUES[2]:
-                            pass
-                        parameters = get_formula_parameters(counter_widget.formula)
-                        values = []
-                        for p in parameters:
-                            if p=='b':
-                                values.append(counter_widget.b)
-                            elif p=='a':
-                                values.append(counter_widget.a)
-                            else:
-                                temp = all_counter_widgets.get(p)
-                                if temp!=None:
-                                    values.append(float(temp.workout))
-                                else:
-                                    values.append(0)
-                        counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
-                        counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
-                        counter_widget.entry_workout.delete(0, END)
-                        counter_widget.entry_workout.insert(0, counter_widget.workout)
-                        counter_widget.entry_workout.config(state='disabled')
+                elif counter_widget.type==PARAMETER_TYPES[0]:
+                    counter_widget.label_previous_counter.config(text=round4(counter_widget.b))
+                    counter_widget.entry_current_counter.delete(0, END)
+                    if counter_widget.default_value==DEFAULT_VALUES[0]:
+                        counter_widget.entry_current_counter.insert(0, round4(counter_widget.b))
+                    elif counter_widget.default_value==DEFAULT_VALUES[1]:
+                        counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
+                    elif counter_widget.default_value==DEFAULT_VALUES[2]:
+                        pass
+                    # parameters = get_formula_parameters(counter_widget.formula)
+                    # values = []
+                    # for p in parameters:
+                    #     if p=='b':
+                    #         values.append(counter_widget.b)
+                    #     elif p=='a':
+                    #         values.append(counter_widget.a)
+                    #     else:
+                    #         temp = all_counter_widgets.get(p)
+                    #         if temp!=None:
+                    #             values.append(float(temp.workout))
+                    #         else:
+                    #             values.append(0)
+                    # counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
+                    counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
+                    counter_widget.entry_workout.delete(0, END)
+                    # counter_widget.entry_workout.insert(0, counter_widget.workout)
+                    counter_widget.entry_workout.config(state='disabled')
             try:
                 create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
             except:
@@ -1803,10 +1804,11 @@ class DatePicker(MyWindows):
         
 
 class PartWidget(MyWindows):
-    def __init__(self, connection: Connection, root: Tk, places_with_counters):
+    def __init__(self, connection: Connection, root: Tk, places_with_counters, staff_window: StaffWindow):
         super().__init__(connection, root)
         global all_counter_widgets
         self.places_with_counters=places_with_counters # یک لیستی از مکان ها با پارامترهایی که داخلشون هست. یعنی یک لیستی از تاپل ها که هر کودوم از تاپل ها هر عضوشون یه پارامتر هست.
+        self.staff_window = staff_window
         self.my_canvas = Canvas(self.frame, width=int(self.S_WIDTH*0.985), height=int(self.S_HEIGHT*0.72), bg=COLORS['BG'])
         self.my_canvas.bind("<MouseWheel>", self.on_mousewheel)
         self.ver_scrollbar = Scrollbar(self.frame, orient=VERTICAL, command=self.my_canvas.yview)
