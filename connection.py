@@ -334,6 +334,7 @@ class Connection():
             return temp
         return ParameterLog(*temp)
 
+    # def get_parameters_log_by_date(self, date) -> dict[ParameterLog|None]:
     def get_parameters_log_by_date(self, date):
         self.set_max_date_into_temp_table(date)
         query = "SELECT `value`, `workout`, `is_ok`, `date`, `date_time_modified`, `tbl_parameters_log`.`parameter_id`, `tbl_parameters_log`.`user_id`, `tbl_parameters_log`.`id`, `tbl_users`.`name` AS `users_name`, `tbl_users`.`surname` AS `users_surname`, `tbl_parameters`.`type`, `tbl_parameters`.`variable_name` FROM (`tbl_parameters` JOIN `tbl_parameters_max_date` ON (`tbl_parameters`.`id`=`tbl_parameters_max_date`.`parameter_id`)) JOIN `tbl_parameters_log` ON (`tbl_parameters`.`id`=`tbl_parameters_log`.`parameter_id` AND `tbl_parameters_max_date`.`max_date`=`tbl_parameters_log`.`date`) JOIN `tbl_users` ON (`tbl_parameters_log`.`user_id`=`tbl_users`.`id`);"
