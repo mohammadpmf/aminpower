@@ -1582,11 +1582,11 @@ class StaffWindow(MyWindows):
                 counter_widget.entry_workout.config(bg=COLORS['ALARM_COLOR'], readonlybackground=COLORS['ALARM_COLOR'])
             counter_widget.counter_log = counter_widget.connection.get_parameter_log_by_parameter_id_and_date(counter_widget.id, date_picker.get_date())
             if counter_widget.counter_log!=None:
-                counter_widget.b = counter_widget.counter_log.value
                 counter_widget.workout = counter_widget.counter_log.workout
+                counter_widget.b = counter_widget.counter_log.value
             else:
-                counter_widget.b = 0
                 counter_widget.workout = 0
+                counter_widget.b = 0
             counter_widget.a = counter_widget.connection.get_previous_value_of_parameter_by_id_and_date(counter_widget.id, date_picker.get_date())
             if counter_widget.a==None:
                 counter_widget.a=0
@@ -1613,14 +1613,13 @@ class StaffWindow(MyWindows):
                 if counter_widget.type==PARAMETER_TYPES[2]:
                     counter_widget.entry_workout.config(text='', bg=COLORS['ALARM_COLOR'])
                 elif counter_widget.type==PARAMETER_TYPES[1]:
+                    counter_widget.entry_workout.delete(0, END)
                     if counter_widget.default_value==DEFAULT_VALUES[0]:
-                        counter_widget.entry_workout.delete(0, END)
-                        counter_widget.entry_workout.insert(0, round4(counter_widget.counter_log.workout))
+                        counter_widget.entry_workout.insert(0, round4(counter_widget.workout))
                     elif counter_widget.default_value==DEFAULT_VALUES[1]:
-                        counter_widget.entry_workout.delete(0, END)
                         counter_widget.entry_workout.insert(0, round4(DEFAULT_VALUES[1]))
                     elif counter_widget.default_value==DEFAULT_VALUES[2]:
-                        counter_widget.entry_workout.delete(0, END)
+                        pass
                 elif counter_widget.type==PARAMETER_TYPES[0]:
                     counter_widget.label_previous_counter.config(text=round4(counter_widget.b))
                     counter_widget.entry_current_counter.delete(0, END)
@@ -1630,23 +1629,8 @@ class StaffWindow(MyWindows):
                         counter_widget.entry_current_counter.insert(0, DEFAULT_VALUES[1])
                     elif counter_widget.default_value==DEFAULT_VALUES[2]:
                         pass
-                    # parameters = get_formula_parameters(counter_widget.formula)
-                    # values = []
-                    # for p in parameters:
-                    #     if p=='b':
-                    #         values.append(counter_widget.b)
-                    #     elif p=='a':
-                    #         values.append(counter_widget.a)
-                    #     else:
-                    #         temp = all_counter_widgets.get(p)
-                    #         if temp!=None:
-                    #             values.append(float(temp.workout))
-                    #         else:
-                    #             values.append(0)
-                    # counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
                     counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
                     counter_widget.entry_workout.delete(0, END)
-                    # counter_widget.entry_workout.insert(0, counter_widget.workout)
                     counter_widget.entry_workout.config(state='disabled')
             try:
                 create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
@@ -1979,23 +1963,36 @@ class CounterWidget(Parameter, MyWindows):
                     self.workout = self.entry_workout.get().strip()
                     self.workout = float(self.workout)
                 except ValueError:
-                    print("Unhandled exception 3 :D")
+                    self.workout = 0
+                    print("Unhandled exception 1 :D")
                 except TypeError:
-                    print("Unhandled exception 4 :D")
+                    self.workout = 0
+                    print("Unhandled exception 2 :D")
                 finally:
                     self.check_color()
             elif self.type==PARAMETER_TYPES[0]:
+                self.a = self.label_previous_counter['text']
+                self.a = float(self.a)
                 try:
-                    self.a = self.label_previous_counter['text']
                     self.b = self.entry_current_counter.get().strip()
-                    self.workout = self.entry_workout.get().strip()
-                    self.a = float(self.a)
                     self.b = float(self.b)
+                except ValueError:
+                    self.b = 0
+                    print("Unhandled exception 3 :D")
+                except TypeError:
+                    self.b = 0
+                    print("Unhandled exception 4 :D")
+                finally:
+                    self.check_color()
+                try:
+                    self.workout = self.entry_workout.get().strip()
                     self.workout = float(self.workout)
                 except ValueError:
-                    print('unhandled exception 1 :D')
+                    print("Unhandled exception 5 :D")
+                    self.workout = 0
                 except TypeError:
-                    print('unhandled exception 2 :D')
+                    print("Unhandled exception 6 :D")
+                    self.workout = 0
                 finally:
                     self.check_color()
             self.update_all_variables_current_value_and_workout()
@@ -2049,41 +2046,40 @@ class CounterWidget(Parameter, MyWindows):
             try:
                 self.workout=float(self.entry_workout.get().strip())
             except ValueError:
-                # self.workout=0
-                return
+                self.workout=0
             except TypeError:
-                # self.workout=0
-                return
-            finally:
-                self.check_color()
+                self.workout=0
+            self.check_color()
         elif self.type==PARAMETER_TYPES[0]:
             if self.boolean_var_bad.get():
                 self.check_color()
             else:
+                self.a = float(self.label_previous_counter['text'])
                 try:
                     self.b = float(self.entry_current_counter.get().strip())
-                    parameters = get_formula_parameters(self.formula)
-                    values = []
-                    for p in parameters:
-                        if p=='b':
-                            values.append(self.b)
-                        elif p=='a':
-                            values.append(self.a)
-                        else:
-                            temp = all_counter_widgets.get(p)
-                            if temp!=None:
-                                values.append(float(temp.workout))
-                            else:
-                                values.append(0)
-                    self.workout = calculate_fn(self.formula, parameters, values)
                 except ValueError:
-                    # self.workout=0
-                    return
+                    self.b=0
                 except TypeError:
-                    # self.workout=0
-                    return
-                finally:
-                    self.check_color()
+                    self.b=0
+                parameters = get_formula_parameters(self.formula)
+                values = []
+                for p in parameters:
+                    if p=='b':
+                        values.append(self.b)
+                    elif p=='a':
+                        values.append(self.a)
+                    else:
+                        temp: CounterWidget = all_counter_widgets.get(p)
+                        if temp!=None:
+                            values.append(float(temp.workout))
+                        else:
+                            values.append(0)
+                self.workout = calculate_fn(self.formula, parameters, values)
+                self.entry_workout.config(state='normal')
+                self.entry_workout.delete(0, END)
+                self.entry_workout.insert(0, self.workout)
+                self.entry_workout.config(state='disabled')
+                self.check_color()
         # for _ in range(10):
         #     self.next()
         # :D
@@ -2102,7 +2098,7 @@ class CounterWidget(Parameter, MyWindows):
             pass # هیچ وقت اتفاق نمیفته
         elif self.type==PARAMETER_TYPES[1]:
             self.entry_workout.delete(0, END)
-            self.entry_workout.insert(0, round4(self.a))
+            self.entry_workout.insert(0, round4(self.b))
         elif self.type==PARAMETER_TYPES[0]:
             self.entry_current_counter.delete(0, END)
             self.entry_current_counter.insert(0, self.label_previous_counter['text'])
