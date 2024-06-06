@@ -1498,13 +1498,13 @@ class StaffWindow(MyWindows):
                     for p in parameters:
                         if updated_next_logs.get(counter.variable_name)!=None:
                             # if p=='b':  نباید باشه. معامله به هم میریزه کلا این طوری.
-                            #     values.append(updated_next_logs.get(counter.variable_name).value)
+                            #     values.append(float(updated_next_logs.get(counter.variable_name).value))
                             if p=='a':
-                                values.append(updated_logs.get(counter.variable_name).workout)
+                                values.append(float(updated_logs.get(counter.variable_name).workout))
                             else:
-                                values.append(updated_next_logs.get(p).workout)
+                                values.append(float(updated_next_logs.get(p).workout))
                         elif updated_next_logs.get(counter.variable_name)==None:
-                            values.append(0)
+                            values.append(0.0)
                     answer = calculate_fn(counter.formula, parameters, values)
                     if updated_next_logs.get(counter.variable_name)!=None:
                         updated_next_logs[counter.variable_name].workout=answer
@@ -1516,13 +1516,13 @@ class StaffWindow(MyWindows):
                     for p in parameters:
                         if updated_next_logs.get(counter.variable_name)!=None:
                             if p=='b':
-                                values.append(updated_next_logs.get(counter.variable_name).value)
+                                values.append(float(updated_next_logs.get(counter.variable_name).value))
                             elif p=='a':
-                                values.append(updated_logs.get(counter.variable_name).value)
+                                values.append(float(updated_logs.get(counter.variable_name).value))
                             else:
-                                values.append(updated_next_logs.get(p).workout)
+                                values.append(float(updated_next_logs.get(p).workout))
                         elif updated_next_logs.get(counter.variable_name)==None:
-                            values.append(0)
+                            values.append(0.0)
                     answer = calculate_fn(counter.formula, parameters, values)
                     if updated_next_logs.get(counter.variable_name)!=None:
                         # پارامترهای کنتور، اگه سالم باشن باید تغییر کنند. اما اگه خراب باشن، به مقدار ورک اوتشون دست نمیزنیم و همون قبلی میمونن
@@ -1640,6 +1640,7 @@ class StaffWindow(MyWindows):
                     counter_widget.entry_workout.config(state='normal', disabledbackground=COLORS['ALARM_COLOR'])
                     counter_widget.entry_workout.delete(0, END)
                     counter_widget.entry_workout.config(state='disabled')
+                    counter_widget.boolean_var_bad.set(False)
             try:
                 create_tool_tip(counter_widget.lbl_info, text=counter_widget.counter_log.users_full_name)
             except:
@@ -2005,13 +2006,13 @@ class CounterWidget(Parameter, MyWindows):
                     # if p=='b':
                     #     values.append(counter_widget.b)
                     if p=='a':
-                        values.append(counter_widget.a)
+                        values.append(float(counter_widget.a))
                     else:
                         temp:CounterWidget = all_counter_widgets.get(p)
                         if temp!=None:
                             values.append(float(temp.workout))
                         else:
-                            values.append(0)
+                            values.append(0.0)
                 counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
                 counter_widget.entry_workout.config(text=counter_widget.workout)
             elif counter_widget.type==PARAMETER_TYPES[1]:
@@ -2038,7 +2039,7 @@ class CounterWidget(Parameter, MyWindows):
                             if temp!=None:
                                 values.append(float(temp.workout))
                             else:
-                                values.append(0)
+                                values.append(0.0)
                     counter_widget.workout = calculate_fn(counter_widget.formula, parameters, values)
                     counter_widget.entry_workout.config(state='normal')
                     counter_widget.entry_workout.delete(0, END)
@@ -2079,15 +2080,15 @@ class CounterWidget(Parameter, MyWindows):
                 values = []
                 for p in parameters:
                     if p=='b':
-                        values.append(self.b)
+                        values.append(float(self.b))
                     elif p=='a':
-                        values.append(self.a)
+                        values.append(float(self.a))
                     else:
                         temp: CounterWidget = all_counter_widgets.get(p)
                         if temp!=None:
                             values.append(float(temp.workout))
                         else:
-                            values.append(0)
+                            values.append(0.0)
                 self.workout = calculate_fn(self.formula, parameters, values)
                 self.entry_workout.config(state='normal')
                 self.entry_workout.delete(0, END)
