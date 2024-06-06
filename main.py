@@ -40,7 +40,7 @@ try:
 except JSONDecodeError:
     shared_preferences = {
         'host': '127.0.0.1',
-        'db': 'amar2',
+        'db': 'amar',
         'username': 'root',
         'password': 'root',
         'skip_mysql_password': False,
@@ -48,7 +48,7 @@ except JSONDecodeError:
 except FileNotFoundError:
     shared_preferences = {
         'host': '127.0.0.1',
-        'db': 'amar2',
+        'db': 'amar',
         'username': 'root',
         'password': 'root',
         'skip_mysql_password': False,
@@ -65,11 +65,19 @@ create_my_theme() # اول تو ستینگز بود. اما چون پنجره ا
 
 # تااینجا باید در هر صورت ساخته بشه. از اینجا به بعد بستگی داره به وضعیت که چه طور باشه
 try:
-    skip = shared_preferences.get('skip_mysql_password', False)
+    host = shared_preferences.get('host', '127.0.0.1')
+    db = shared_preferences.get('db', 'amar')
+    username = shared_preferences.get('username', 'root')
+    password = shared_preferences.get('password', 'root')
+    skip_mysql_password = shared_preferences.get('skip_mysql_password', False)
 except AttributeError:
-    skip = False
-if skip:
-    connection = Connection('127.0.0.1', 'root', 'root', 'amar22')
+    host= '127.0.0.1'
+    db= 'amar'
+    username= 'root'
+    password= 'root'
+    skip_mysql_password = False
+if skip_mysql_password:
+    connection = Connection(host, username, password, db)
     login_form = LoginForm(connection, root)
     login_form.grid()
 else:
@@ -88,7 +96,7 @@ else:
     entry_username = Entry(temp_window, cnf=CNF_ENTRY)
     entry_password = Entry(temp_window, cnf=CNF_ENTRY, show='*')
     entry_host.insert(0, '127.0.0.1')
-    entry_db.insert(0, 'amar2')
+    entry_db.insert(0, 'amar')
     entry_username.insert(0, 'root')
     entry_password.insert(0, 'root')
     entry_host.bind('<Return>', lambda e: entry_db.focus_set())

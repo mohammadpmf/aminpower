@@ -6,7 +6,7 @@ from ui_settings import PARAMETER_TYPES
 WRONG_LIMIT=10
 
 class Connection():
-    def __init__(self, host='127.0.0.1', username='root', password='root', db='amar2'):
+    def __init__(self, host='127.0.0.1', username='root', password='root', db='amar'):
         self.user = Staff("admin", "admin", "admin", "admin", 3, 0, "روز قبل", 1)
         self.host = host
         self.db=db
@@ -14,7 +14,7 @@ class Connection():
         self.password = password
         self.connection = pymysql.connect(host=self.host, user=self.username, passwd=self.password, database=self.db, charset='utf8')
         self.cursor = self.connection.cursor()
-        # query = "CREATE SCHEMA IF NOT EXISTS `amar2`;"
+        # query = "CREATE SCHEMA IF NOT EXISTS `amar`;"
         # self.cursor.execute(query)
         query = "CREATE TABLE IF NOT EXISTS `tbl_users` (`id` INT UNSIGNED NOT NULL AUTO_INCREMENT, `name` VARCHAR(64) NOT NULL, `surname` VARCHAR(64) NOT NULL, `username` VARCHAR(64) NOT NULL, `password` VARCHAR(128) NOT NULL, `access_level` TINYINT(1) NOT NULL DEFAULT 2, `wrong_times` TINYINT(2) NOT NULL DEFAULT 0, `default_date` VARCHAR(64) NOT NULL DEFAULT 'روز قبل', PRIMARY KEY (`id`), UNIQUE INDEX `username_UNIQUE` (`username` ASC)) ENGINE = MyISAM;"
         self.cursor.execute(query)

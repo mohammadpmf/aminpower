@@ -1268,6 +1268,7 @@ class StaffWindow(MyWindows):
             parts_tab.append(PartWidget(self.connection, tabs_list[i], places_with_counters, self))
             parts_tab[i].pack()
         self.tab_control_frame.pack(expand=1, fill="both")
+        self.tab_control_frame.select(len(self.tab_control_frame.children)-1)
         for i, counter_widget in enumerate(list(all_counter_widgets.values())):
             counter_widget: CounterWidget
             if counter_widget.type==PARAMETER_TYPES[2]:
