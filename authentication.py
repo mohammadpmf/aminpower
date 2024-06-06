@@ -201,6 +201,15 @@ class StaffWindow(MyWindows):
             self.btn_set_theme_disabled_fg_color = Button(self.frame_set_color_theme, text='رنگ نوشته غیر فعال', cnf=CNF_BTN, command=lambda: self.select_color('DISABLED_FG'))
             self.btn_set_theme_bg_lighter_color = Button(self.frame_set_color_theme, text='رنگ پس زمینه روشن تر', cnf=CNF_BTN, command=lambda: self.select_color('BG_LIGHTER'))
             self.btn_set_theme_fg2_color = Button(self.frame_set_color_theme, text='رنگ دوم نوشته ها', cnf=CNF_BTN, command=lambda: self.select_color('FG2'))
+            self.treev_theme = ttk.Treeview(self.frame_set_color_theme, height=6, selectmode ='browse', show='headings')
+            self.treev_theme.grid(row=3, rowspan=3, column=2, columnspan=10, sticky='news')
+            self.treev_theme["columns"] = ("1", "2")
+            self.treev_theme.column("1", width = 400, anchor ='c')
+            self.treev_theme.column("2", width = 100, anchor ='c')
+            self.treev_theme.heading("1", text ="بخش تست تم برنامه", anchor='c')
+            self.treev_theme.heading("2", text ="ردیف", anchor='c')
+            self.treev_theme.insert("", 1, values=('متن تستی اول', 1))
+            self.treev_theme.insert("", 2, values=('متن تستی دوم', 2))
             self.btn_set_theme_bg_color.grid(row=1, column=6, cnf=CNF_GRID)
             self.btn_set_theme_fg_color.grid(row=1, column=5, cnf=CNF_GRID)
             self.btn_set_theme_alarm_color.grid(row=1, column=4, cnf=CNF_GRID)
@@ -211,7 +220,7 @@ class StaffWindow(MyWindows):
             self.btn_set_theme_bg_lighter_color.grid(row=2, column=4, cnf=CNF_GRID)
             self.btn_set_theme_fg2_color.grid(row=2, column=3, cnf=CNF_GRID)
             self.btn_confirm_theme_color = Button(self.frame_set_color_theme, text='تایید رنگ بندی انتخاب شده', cnf=CNF_BTN, font=FONT2, command=self.confirm_theme_color)
-            self.btn_confirm_theme_color.grid(row=3, column=1, cnf=CNF_GRID)
+            self.btn_confirm_theme_color.grid(row=5, column=1, cnf=CNF_GRID)
 
             ###################################### frame_set_default_date ######################################
             self.frame_set_default_date = LabelFrame(self.frame_set_default_date_tab, cnf=CNF_LBL_FRM)
@@ -1546,15 +1555,39 @@ class StaffWindow(MyWindows):
         hex_color = choosed_color[1]
         if hex_color!=None:
             COLORS[what_color]=hex_color
-    
+        if what_color=='BG':
+            self.btn_set_theme_bg_color.config(bg=hex_color)
+            self.btn_set_theme_fg_color.config(bg=hex_color)
+        elif what_color=='FG':
+            self.btn_set_theme_bg_color.config(fg=hex_color)
+            self.btn_set_theme_fg_color.config(fg=hex_color)
+        elif what_color=='ALARM_COLOR':
+            self.btn_set_theme_alarm_color.config(fg=hex_color, bg=hex_color)
+        elif what_color=='WARNING_COLOR':
+            self.btn_set_theme_warning_color.config(fg=hex_color, bg=hex_color)
+        elif what_color=='OK_COLOR':
+            self.btn_set_theme_ok_color.config(fg=hex_color, bg=hex_color)
+        elif what_color=='DISABLED_BG':
+            self.btn_set_theme_disabled_bg_color.config(fg=hex_color, bg=hex_color)
+        elif what_color=='DISABLED_FG':
+            self.btn_set_theme_disabled_fg_color.config(fg=hex_color, bg=hex_color)
+        elif what_color=='BG_LIGHTER':
+            self.btn_set_theme_bg_lighter_color.config(fg=hex_color, bg=hex_color)
+        elif what_color=='FG2':
+            self.btn_set_theme_fg2_color.config(fg=hex_color, bg=hex_color)
+
     def confirm_theme_color(self):
         try:
             os.mkdir('files')
         except FileExistsError:
             pass # فولدر خودش وجود داره. چی بهتر از این :)
-        f = open(r'files/theme.json', 'w')
-        dump(COLORS, f, indent=4)
-        f.close()
+        try:
+            f = open(r'files/theme.json', 'w')
+            dump(COLORS, f, indent=4)
+            f.close()
+            msb.showinfo('موفقیت', 'تم برنامه با موفقیت تغییر کرد. جهت استفاده از تم جدید برنامه را بسته و مجددا آغاز کنید')
+        except:
+            print('Error in openning file or while working with file :)')
 
     def refresh_ui(self):
         if self.connection.user.access_level==1:
