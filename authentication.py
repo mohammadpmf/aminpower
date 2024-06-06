@@ -139,7 +139,7 @@ class StaffWindow(MyWindows):
         self.tab_control_frame.pack(side=TOP, expand=True, fill='both')
         self.tab_control_frame.bind('<Button-1>', self.disable_confirm_buttons)
         self.tab_control_frame.bind('<Key>', self.disable_confirm_buttons)
-        self.tab_control_frame.bind('<ButtonRelease-1>', self.fill_counter_widgets)
+        self.tab_control_frame.bind('<ButtonRelease-1>', self.enable_btns_without_filling_counter_widgets)
         self.bottom_frame = Frame(self.frame_add_statistics, bg=COLORS['BG'])
         self.bottom_frame.pack(side=BOTTOM, expand=True, fill='x')
         self.bottom_frame_right = Frame(self.bottom_frame, bg=COLORS['BG'])
@@ -1607,6 +1607,18 @@ class StaffWindow(MyWindows):
                 signal=0
                 self.refresh_ui()
     
+    def enable_btns_without_filling_counter_widgets(self, event=None):
+        part_name = self.tab_control_frame.tab(self.tab_control_frame.select(), "text")
+        if part_name in self.logged_parts_names:
+            self.fill_counter_widgets()
+        else:
+            try:
+                list(all_counter_widgets.values())[0].next()
+            except:
+                msb.showinfo('دقت کنید', 'برای مشاهده تغییرات پارامترهای محاسباتی که به پارامترهای ثابت یا کنتورهای بخش های دیگر وابسته اند، ابتدا یک بار روی کنتورهای قابل نوشتن کلیک کنید که تغییرات آنها در برنامه اعمال شود و سپس روی تب مورد نظر خود کلیک کنید')
+            self.disable_for_safety()
+            self.enable_or_disable_confirm_button()
+            self.enable_for_safety()
     def fill_counter_widgets(self, event=None):
         global all_counter_widgets, sheet_state, date_picker
         self.btn_confirm_counter_log_insert.config(state='disabled', relief='flat')
