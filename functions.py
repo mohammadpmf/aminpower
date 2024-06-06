@@ -149,8 +149,18 @@ def calculate_fn(formula: str, parameters: list, values: list):
         answer = round4(fn(*values))
         return answer
     except TypeError:
-        return 0
+        print("Warning in calculate_fn except layer 1 :D (Decimal & Float)")
+        values_copy = []
+        for item in values:
+            values_copy.append(float(item))
+        try:
+            answer = round4(fn(*values_copy))
+            return answer
+        except TypeError:
+            print("Error in calculate_fn except layer 2 :D (Decimal & Float)")
+            return 0
     except ZeroDivisionError:
+        print("Warning in calculate_fn except layer 1 :D (Zero Division)")
         return 0
     
 if __name__=='__main__':

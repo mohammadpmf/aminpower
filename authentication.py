@@ -1479,7 +1479,7 @@ class StaffWindow(MyWindows):
             msb.showinfo('success', message)
             self.btn_confirm_counter_log_update.config(state='normal', relief='raised')
             self.enable_for_safety()
-            # self.update_next_logs_if_necessary()
+            self.update_next_logs_if_necessary()
         else:
             self.fill_counter_widgets()
             msb.showerror("ارور", result_message)
@@ -1488,50 +1488,56 @@ class StaffWindow(MyWindows):
         global all_counter_widgets, date_picker
         updated_logs = self.connection.get_parameters_log_by_date(date_picker.get_date())
         updated_next_logs = self.connection.get_parameters_next_log_by_date(date_picker.get_date())
-        # for key, value in updated_logs.items():
-        #     value: ParameterLog
-        #     print(f"{key:10}{value.date}  {value.value:<20}{value.workout:<20}{value.type:<20}")
-        # print('-'*90)
-        # for key, value in updated_next_logs.items():
-        #     value: ParameterLog
-        #     print(f"{key:10}{value.date}  {value.value:<20}{value.workout:<20}{value.type:<20}")
-        # print('-'*90)
         for counters in self.all_counters_2d:
             for counter in counters:
                 counter: Parameter
-                if counter.type==PARAMETER_TYPES[1]:
-                    continue # پارامترهای ثابت، وابسته به بقیه نیستند. پس تغییری نمیکنند و لازم نیست الکی بررسیشون کنیم و چون تغییر نمیکنند به دیتابیس هم لازم نیست دستوری بدیم پس میریم سراغ پارامتر بعدی
-                # چون ثابت نبودند، پس حتما فرمول دارند
-                parameters = get_formula_parameters(counter.formula)
-                values = []
-                for p in parameters:
+                if counter.type==PARAMETER_TYPES[2]:
+                    parameters = get_formula_parameters(counter.formula)
+                    values = []
+                    for p in parameters:
+                        if updated_next_logs.get(counter.variable_name)!=None:
+                            # if p=='b':  نباید باشه. معامله به هم میریزه کلا این طوری.
+                            #     values.append(updated_next_logs.get(counter.variable_name).value)
+                            if p=='a':
+                                values.append(updated_logs.get(counter.variable_name).workout)
+                            else:
+                                values.append(updated_next_logs.get(p).workout)
+                        elif updated_next_logs.get(counter.variable_name)==None:
+                            values.append(0)
+                    answer = calculate_fn(counter.formula, parameters, values)
                     if updated_next_logs.get(counter.variable_name)!=None:
-                        if p=='b':
-                            values.append(updated_next_logs.get(counter.variable_name).value)
-                        elif p=='a':
-                            values.append(updated_logs.get(counter.variable_name).value)
-                        else:
-                            values.append(updated_next_logs.get(p).workout)
-                    elif updated_next_logs.get(counter.variable_name)==None:
-                        values.append(0)
-                answer = calculate_fn(counter.formula, parameters, values)
-                if updated_next_logs.get(counter.variable_name)!=None:
-                    if counter.type==PARAMETER_TYPES[2]:
                         updated_next_logs[counter.variable_name].workout=answer
-                    elif counter.type==PARAMETER_TYPES[0]:
+                elif counter.type==PARAMETER_TYPES[1]:
+                    continue # پارامترهای ثابت، وابسته به بقیه نیستند. پس تغییری نمیکنند و لازم نیست الکی بررسیشون کنیم و چون تغییر نمیکنند به دیتابیس هم لازم نیست دستوری بدیم پس میریم سراغ پارامتر بعدی
+                elif counter.type==PARAMETER_TYPES[0]:
+                    parameters = get_formula_parameters(counter.formula)
+                    values = []
+                    for p in parameters:
+                        if updated_next_logs.get(counter.variable_name)!=None:
+                            if p=='b':
+                                values.append(updated_next_logs.get(counter.variable_name).value)
+                            elif p=='a':
+                                values.append(updated_logs.get(counter.variable_name).value)
+                            else:
+                                values.append(updated_next_logs.get(p).workout)
+                        elif updated_next_logs.get(counter.variable_name)==None:
+                            values.append(0)
+                    answer = calculate_fn(counter.formula, parameters, values)
+                    if updated_next_logs.get(counter.variable_name)!=None:
                         # پارامترهای کنتور، اگه سالم باشن باید تغییر کنند. اما اگه خراب باشن، به مقدار ورک اوتشون دست نمیزنیم و همون قبلی میمونن
                         if updated_next_logs[counter.variable_name].is_ok:
                             updated_next_logs[counter.variable_name].workout=answer
-                        else:
-                            pass
-                else:
-                    pass
         for log in updated_next_logs.values():
+            log: ParameterLog
             if log!=None:
-                self.connection.change_log_by_computer_id(log)
+                if log.type==PARAMETER_TYPES[2]:
+                    self.connection.change_log_by_computer_id(log)
+                elif log.type==PARAMETER_TYPES[1]:
+                    pass
+                elif log.type==PARAMETER_TYPES[0]:
+                    self.connection.change_log_by_computer_id(log)
         del updated_logs
         del updated_next_logs
-
 
     ########################################### generic functions ###########################################
     def select_color(self, what_color):
