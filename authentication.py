@@ -100,6 +100,7 @@ class StaffWindow(MyWindows):
         self.main_window.config(bg=COLORS['BG'])
         self.main_window.state('zoomed')
         self.main_window.protocol("WM_DELETE_WINDOW", self.root.destroy)
+        self.main_window.iconbitmap(r"icons/counter_icon.ico")
         self.tab_control = ttk.Notebook(self.main_window) 
         self.tab_control.pack(anchor='n')
         self.frame_change_password_tab = Frame(self.tab_control, bg=COLORS['BG'])
@@ -1312,6 +1313,10 @@ class StaffWindow(MyWindows):
                 return
 
     def disable_confirm_buttons(self, event=None):
+        try:
+            list(all_counter_widgets.values())[0].next()
+        except:
+            print('Unknown Expeption :D')
         self.btn_confirm_counter_log_insert.config(state='disabled', relief='flat')
         self.btn_confirm_counter_log_update.config(state='disabled', relief='flat')
         self.disable_for_safety()
@@ -1414,6 +1419,10 @@ class StaffWindow(MyWindows):
             self.btn_confirm_counter_log_insert.pack_forget()
             self.btn_confirm_counter_log_update.pack(side=LEFT, padx=PADX)
             self.enable_for_safety()
+            try:
+                list(all_counter_widgets.values())[0].next()
+            except:
+                msb.showinfo('دقت کنید', 'برای مشاهده تغییرات پارامترهای محاسباتی که به پارامترهای ثابت یا کنتورهای بخش های دیگر وابسته اند، ابتدا یک بار روی کنتورهای قابل نوشتن کلیک کنید که تغییرات آنها در برنامه اعمال شود و سپس روی تب مورد نظر خود کلیک کنید')
         else:
             self.fill_counter_widgets()
             msb.showerror("ارور", result_message)
@@ -1489,7 +1498,12 @@ class StaffWindow(MyWindows):
             msb.showinfo('success', message)
             self.btn_confirm_counter_log_update.config(state='normal', relief='raised')
             self.enable_for_safety()
+            try:
+                list(all_counter_widgets.values())[0].next()
+            except:
+                msb.showinfo('دقت کنید', 'برای مشاهده تغییرات پارامترهای محاسباتی که به پارامترهای ثابت یا کنتورهای بخش های دیگر وابسته اند، ابتدا یک بار روی کنتورهای قابل نوشتن کلیک کنید که تغییرات آنها در برنامه اعمال شود و سپس روی تب مورد نظر خود کلیک کنید')
             self.update_next_logs_if_necessary()
+
         else:
             self.fill_counter_widgets()
             msb.showerror("ارور", result_message)
@@ -1608,17 +1622,10 @@ class StaffWindow(MyWindows):
                 self.refresh_ui()
     
     def enable_btns_without_filling_counter_widgets(self, event=None):
-        part_name = self.tab_control_frame.tab(self.tab_control_frame.select(), "text")
-        if part_name in self.logged_parts_names:
-            self.fill_counter_widgets()
-        else:
-            try:
-                list(all_counter_widgets.values())[0].next()
-            except:
-                msb.showinfo('دقت کنید', 'برای مشاهده تغییرات پارامترهای محاسباتی که به پارامترهای ثابت یا کنتورهای بخش های دیگر وابسته اند، ابتدا یک بار روی کنتورهای قابل نوشتن کلیک کنید که تغییرات آنها در برنامه اعمال شود و سپس روی تب مورد نظر خود کلیک کنید')
-            self.disable_for_safety()
-            self.enable_or_disable_confirm_button()
-            self.enable_for_safety()
+        self.disable_for_safety()
+        self.enable_or_disable_confirm_button()
+        self.enable_for_safety()
+
     def fill_counter_widgets(self, event=None):
         global all_counter_widgets, sheet_state, date_picker
         self.btn_confirm_counter_log_insert.config(state='disabled', relief='flat')
@@ -1645,6 +1652,7 @@ class StaffWindow(MyWindows):
                 counter_widget.a=0
             if sheet_state=='update':
                 if counter_widget.type==PARAMETER_TYPES[2]:
+                    counter_widget.label_previous_counter.config(text=round4(counter_widget.a))
                     counter_widget.entry_workout.config(text=round4(counter_widget.workout))
                 elif counter_widget.type==PARAMETER_TYPES[1]:
                     counter_widget.entry_workout.delete(0, END)
@@ -1664,6 +1672,7 @@ class StaffWindow(MyWindows):
                         counter_widget.entry_workout.config(state='disabled')
             elif sheet_state=='insert':
                 if counter_widget.type==PARAMETER_TYPES[2]:
+                    counter_widget.label_previous_counter.config(text=round4(counter_widget.b)) # inja
                     counter_widget.entry_workout.config(text='', bg=COLORS['ALARM_COLOR'])
                 elif counter_widget.type==PARAMETER_TYPES[1]:
                     counter_widget.entry_workout.delete(0, END)
@@ -1674,7 +1683,7 @@ class StaffWindow(MyWindows):
                     elif counter_widget.default_value==DEFAULT_VALUES[2]:
                         pass
                 elif counter_widget.type==PARAMETER_TYPES[0]:
-                    counter_widget.label_previous_counter.config(text=round4(counter_widget.b))
+                    counter_widget.label_previous_counter.config(text=round4(counter_widget.b)) # inja
                     counter_widget.entry_current_counter.delete(0, END)
                     if counter_widget.default_value==DEFAULT_VALUES[0]:
                         counter_widget.entry_current_counter.insert(0, round4(counter_widget.b))
@@ -1943,6 +1952,7 @@ class CounterWidget(Parameter, MyWindows):
         # self.a = self.b = self.workout = None # این هم بعدا مقدار دهی میشه. اول کار تعریف کردم که ارور نده و در جاهای دیگه کد بدونه که هر نمونه از این کلاس این ۲ تا رو داره
         self.a = self.b = self.workout = 0
         if self.type==PARAMETER_TYPES[2]:
+            self.label_previous_counter = Label(self.frame, cnf=CNF_LABEL2, *args, **kwargs)
             self.entry_workout = Label(self.frame, cnf=CNF_LABEL2, font=FONT2, pady=4, width=18, padx=14, height=1, *args, **kwargs)
         elif self.type==PARAMETER_TYPES[1]:
             self.btn_copy = Label(self.frame, image=self.img_copy, cnf=CNF_BTN2, relief='raised', *args, **kwargs)
@@ -2012,7 +2022,7 @@ class CounterWidget(Parameter, MyWindows):
     def next(self, event=None):
         for _ in range(6):
             if self.type==PARAMETER_TYPES[2]: # نمیتونه باشه. نوشتم که بدونم بررسی شده. رو محاسباتی ها نمیشه اینتر زد.
-                pass
+                self.a = float(self.label_previous_counter['text'])
             elif self.type==PARAMETER_TYPES[1]:
                 try:
                     self.workout = float(self.entry_workout.get().strip())
@@ -2050,6 +2060,7 @@ class CounterWidget(Parameter, MyWindows):
                     # تو فرمول محاسباتی نمیشه از مقدار امروز خودش استفاده کرد. تا بینهایت پیش میره. پس نباید باشه
                     # if p=='b':
                     #     values.append(counter_widget.b)
+                    counter_widget.a=float(counter_widget.label_previous_counter['text'])
                     if p=='a':
                         values.append(float(counter_widget.a))
                     else:
@@ -2100,7 +2111,7 @@ class CounterWidget(Parameter, MyWindows):
         if event and event.keysym=='period': # این حالت هم باگ داشت نمیشد داخل ورک اوت تو حالت خرابی نقطه گذاشت. روش های مختلف هر کودوم یه مدل اعصاب خرد کن بود و باگ جدید داشت. این مدل به نظرم کمترین باگ رو داشت اینجا گفتم ریترن کنه
             return
         if self.type==PARAMETER_TYPES[2]:
-            return # هیچ وقت رخ نمیده
+            self.a = float(self.label_previous_counter['text'])
         elif self.type==PARAMETER_TYPES[1]:
             # تو کنتورهای ثابت میشه مقدار نوشت. ممکنه مقدار اشتباه و یا کم و زیاد نوشته بشه. پس ممکنه ارور بده و باید بررسی بشه. رنگ هم باید بررسی بشه و در صورت لزوم تغییر کنه.
             try:

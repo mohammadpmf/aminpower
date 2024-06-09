@@ -61,6 +61,7 @@ root.title('صفحه احراز هویت')
 root.config(bg=COLORS['BG'])
 root.resizable(False, False)
 root.geometry(f"+{S_WIDTH//3}+{S_HEIGHT//3}")
+root.iconbitmap(r"icons/counter_icon.ico")
 create_my_theme() # اول تو ستینگز بود. اما چون پنجره ای ساخته نشده بود یکی جدید میساخت. به خاطر همین تبدیلش کردم به تابع و اونجا نوشتم اما اینجا صداش کردم.
 
 # تااینجا باید در هر صورت ساخته بشه. از اینجا به بعد بستگی داره به وضعیت که چه طور باشه
@@ -83,6 +84,7 @@ if skip_mysql_password:
 else:
     root.withdraw()
     temp_window = Toplevel(root)
+    temp_window.iconbitmap(r"icons/counter_icon.ico")
     temp_window.resizable(False, False)
     temp_window.protocol('WM_DELETE_WINDOW', root.destroy)
     temp_window.geometry(f"+{S_WIDTH//3}+{S_HEIGHT//3}")
